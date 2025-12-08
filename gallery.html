@@ -1,18 +1,22 @@
-<div id="floating-viewer-window" style="display: none; position: fixed; top: -9999px; left: -9999px; z-index: 9999;">
-    <!-- Image is the only visible element - HIDDEN until src is set -->
-    <img id="gallery-image" alt="" draggable="false" style="display: none; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); user-select: none;" />
-    
-    <!-- Control bar floats over image -->
-    <div style="position: absolute; right: 4px; top: 4px; z-index: 2000; display: flex; gap: 0px; justify-content: flex-end;">
-        <button id="gallery-close" style="background: rgba(200, 200, 200, 0.8); border: none; color: #666; font-size: 14px; cursor: pointer; padding: 0; width: 24px; height: 24px; border-radius: 50%; line-height: 1; display: flex; align-items: center; justify-content: center;">✕</button>
+<template id="floating-viewer-template">
+    <div class="floating-viewer-window" style="display: none; position: fixed; z-index: 9999;">
+        <!-- Image container for zoom/pan -->
+        <div class="fv-image-container" style="position: relative; overflow: hidden; border-radius: 10px;">
+            <img class="fv-image" alt="" draggable="false" style="display: block; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); user-select: none; transform-origin: center center;" />
+        </div>
+        
+        <!-- Control bar floats over image -->
+        <div style="position: absolute; right: 4px; top: 4px; z-index: 2000; display: flex; gap: 0px; justify-content: flex-end;">
+            <button class="fv-close" style="background: rgba(200, 200, 200, 0.8); border: none; color: #666; font-size: 14px; cursor: pointer; padding: 0; width: 24px; height: 24px; border-radius: 50%; line-height: 1; display: flex; align-items: center; justify-content: center;">✕</button>
+        </div>
+        
+        <!-- Mobile resize handle (bottom-right corner) -->
+        <div class="fv-resize-handle" style="position: absolute; right: 0; bottom: 0; width: 32px; height: 32px; display: none; align-items: flex-end; justify-content: flex-end; cursor: se-resize; touch-action: none; opacity: 0; transition: opacity 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,200,200,0.9)" stroke-width="2">
+                <line x1="20" y1="4" x2="4" y2="20"/>
+                <line x1="20" y1="10" x2="10" y2="20"/>
+                <line x1="20" y1="16" x2="16" y2="20"/>
+            </svg>
+        </div>
     </div>
-    
-    <!-- Mobile resize handle (bottom-right corner) - hidden by default, shows on touch -->
-    <div id="gallery-resize-handle" style="position: absolute; right: 0; bottom: 0; width: 32px; height: 32px; display: none; align-items: flex-end; justify-content: flex-end; cursor: se-resize; touch-action: none; opacity: 0; transition: opacity 0.2s;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,200,200,0.9)" stroke-width="2">
-            <line x1="20" y1="4" x2="4" y2="20"/>
-            <line x1="20" y1="10" x2="10" y2="20"/>
-            <line x1="20" y1="16" x2="16" y2="20"/>
-        </svg>
-    </div>
-</div>
+</template>

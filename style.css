@@ -1,5 +1,7 @@
+/* ===== FLOATING VIEWER - MULTI-INSTANCE STYLES ===== */
+
 /* Gallery Window - NO background, NO padding, wraps image */
-#floating-viewer-window {
+.floating-viewer-window {
     font-family: var(--mainFontFamily);
     background-color: transparent !important;
     padding: 0 !important;
@@ -8,12 +10,58 @@
     line-height: 0;
     width: auto !important;
     height: auto !important;
+    /* Animation */
+    animation: fv-pop-in 0.2s ease-out forwards;
+}
+
+.floating-viewer-window.fv-closing {
+    animation: fv-pop-out 0.15s ease-in forwards;
+}
+
+/* Pop-in animation */
+@keyframes fv-pop-in {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Pop-out animation */
+@keyframes fv-pop-out {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+}
+
+/* Image container for zoom/pan */
+.fv-image-container {
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.fv-image-container.fv-panning {
+    cursor: grabbing;
+}
+
+.fv-image-container.fv-zoomed {
+    cursor: grab;
 }
 
 /* Image defines the size */
-#gallery-image {
+.fv-image {
     display: block;
     object-fit: contain;
+    transition: transform 0.1s ease-out;
     /* Prevent native browser drag-and-drop on image */
     -webkit-user-drag: none;
     -khtml-user-drag: none;
@@ -24,31 +72,31 @@
 }
 
 /* Close Button - Hidden by default */
-#gallery-close {
+.fv-close {
     transition: all 0.2s;
     opacity: 0;
     pointer-events: none;
 }
 
 /* Show button when hovering over the window */
-#floating-viewer-window:hover #gallery-close {
+.floating-viewer-window:hover .fv-close {
     opacity: 1;
     pointer-events: auto;
 }
 
 /* Button hover state */
-#gallery-close:hover {
+.fv-close:hover {
     background: rgba(180, 180, 180, 0.9) !important;
     color: #333 !important;
     transform: scale(1.1);
 }
 
-#gallery-close:active {
+.fv-close:active {
     transform: scale(0.95);
 }
 
 /* jQuery UI Resize Handles - Hidden by default */
-#floating-viewer-window .ui-resizable-handle {
+.floating-viewer-window .ui-resizable-handle {
     background: transparent;
     z-index: 50;
     opacity: 0;
@@ -56,11 +104,11 @@
 }
 
 /* Show resize handles when hovering */
-#floating-viewer-window:hover .ui-resizable-handle {
+.floating-viewer-window:hover .ui-resizable-handle {
     opacity: 1;
 }
 
-#floating-viewer-window .ui-resizable-n {
+.floating-viewer-window .ui-resizable-n {
     top: 0;
     left: 0;
     width: 100%;
@@ -68,7 +116,7 @@
     cursor: ns-resize;
 }
 
-#floating-viewer-window .ui-resizable-s {
+.floating-viewer-window .ui-resizable-s {
     bottom: 0;
     left: 0;
     width: 100%;
@@ -76,7 +124,7 @@
     cursor: ns-resize;
 }
 
-#floating-viewer-window .ui-resizable-e {
+.floating-viewer-window .ui-resizable-e {
     right: 0;
     top: 0;
     width: 10px;
@@ -84,7 +132,7 @@
     cursor: ew-resize;
 }
 
-#floating-viewer-window .ui-resizable-w {
+.floating-viewer-window .ui-resizable-w {
     left: 0;
     top: 0;
     width: 10px;
@@ -92,7 +140,7 @@
     cursor: ew-resize;
 }
 
-#floating-viewer-window .ui-resizable-ne {
+.floating-viewer-window .ui-resizable-ne {
     top: 0;
     right: 0;
     width: 20px;
@@ -100,7 +148,7 @@
     cursor: ne-resize;
 }
 
-#floating-viewer-window .ui-resizable-nw {
+.floating-viewer-window .ui-resizable-nw {
     top: 0;
     left: 0;
     width: 20px;
@@ -108,7 +156,7 @@
     cursor: nw-resize;
 }
 
-#floating-viewer-window .ui-resizable-se {
+.floating-viewer-window .ui-resizable-se {
     bottom: 0;
     right: 0;
     width: 20px;
@@ -116,7 +164,7 @@
     cursor: se-resize;
 }
 
-#floating-viewer-window .ui-resizable-sw {
+.floating-viewer-window .ui-resizable-sw {
     bottom: 0;
     left: 0;
     width: 20px;
@@ -127,34 +175,33 @@
 /* ===== MOBILE / TOUCH DEVICE STYLES ===== */
 
 /* Touch device detection via JS class */
-#floating-viewer-window.touch-device #gallery-close {
+.floating-viewer-window.touch-device .fv-close {
     opacity: 1 !important;
     pointer-events: auto !important;
-    /* Reduced touch target size for better proportion */
     width: 36px !important;
     height: 36px !important;
     font-size: 18px !important;
 }
 
 /* Mobile resize handle styling - transparent, no background */
-#gallery-resize-handle {
+.fv-resize-handle {
     background: transparent;
     pointer-events: auto;
 }
 
 /* Show resize handle on touch devices */
-#floating-viewer-window.touch-device #gallery-resize-handle {
+.floating-viewer-window.touch-device .fv-resize-handle {
     display: flex !important;
 }
 
-/* Hide jQuery UI resize handles on touch (we use custom handle instead) */
-#floating-viewer-window.touch-device .ui-resizable-handle {
+/* Hide jQuery UI resize handles on touch */
+.floating-viewer-window.touch-device .ui-resizable-handle {
     display: none !important;
 }
 
 /* Fallback: CSS media query for coarse pointers (touch screens) */
 @media (pointer: coarse) {
-    #floating-viewer-window #gallery-close {
+    .floating-viewer-window .fv-close {
         opacity: 1 !important;
         pointer-events: auto !important;
         width: 36px !important;
@@ -162,16 +209,15 @@
         font-size: 18px !important;
     }
     
-    #gallery-resize-handle {
+    .fv-resize-handle {
         display: flex !important;
     }
     
-    #floating-viewer-window .ui-resizable-handle {
+    .floating-viewer-window .ui-resizable-handle {
         display: none !important;
     }
     
-    /* Slightly round corners more on mobile for better aesthetics */
-    #gallery-image {
+    .fv-image {
         border-radius: 12px !important;
     }
 }

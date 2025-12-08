@@ -29,20 +29,75 @@
             
             <hr>
             
+            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-display" style="margin-right: 6px;"></i>Display Settings</h4>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px;">Default Image Size (%)</label>
+                <input type="number" id="floating_viewer_default_size" class="text_pole" 
+                       min="10" max="100" value="60" style="width: 100px;" />
+                <p><small>Initial size as % of viewport (10-100). Ignored when "Remember Position & Size" is enabled.</small></p>
+            </div>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_remember_position" type="checkbox" />
+                Remember Position & Size
+            </label>
+            <p><small>When enabled, the viewer will open at the last used position and size until the tab is closed.</small></p>
+            
+            <hr>
+            
+            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-sliders" style="margin-right: 6px;"></i>Advanced Settings</h4>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_enable_zoom" type="checkbox" />
+                Enable Zoom
+            </label>
+            <p><small>Use scroll wheel or pinch gesture to zoom images. Pan by dragging when zoomed in.</small></p>
+            
+            <div style="margin-top: 10px; margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px;">Maximum Zoom (%)</label>
+                <input type="number" id="floating_viewer_max_zoom" class="text_pole" 
+                       min="100" max="500" value="300" style="width: 100px;" />
+                <p><small>Maximum zoom level (100-500%).</small></p>
+            </div>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_free_pan" type="checkbox" />
+                Free Pan
+            </label>
+            <p><small>Allow panning beyond image bounds when zoomed (creates transparent overflow effect).</small></p>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_multi_image" type="checkbox" />
+                Allow Multiple Windows
+            </label>
+            <p><small>Open multiple images in separate windows simultaneously.</small></p>
+            
+            <div style="margin-top: 10px; margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px;">Maximum Instances</label>
+                <input type="number" id="floating_viewer_max_instances" class="text_pole" 
+                       min="1" max="10" value="5" style="width: 100px;" />
+                <p><small>Maximum simultaneous windows (1-10). Oldest closes when exceeded.</small></p>
+            </div>
+            
+            <hr>
+            
             <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-book-open" style="margin-right: 6px;"></i>How to Use</h4>
             <ul style="margin-left: 20px; font-size: 0.9em;">
                 <li><strong>Chat avatars:</strong> Click any character or user avatar in the chat</li>
                 <li><strong>Gallery:</strong> Go to <strong>More → Show Gallery</strong> and click any image thumbnail</li>
                 <li><strong>Move:</strong> Drag anywhere on the image to reposition</li>
                 <li><strong>Resize:</strong> Drag edges or corners to resize (maintains aspect ratio)</li>
-                <li><strong>Close:</strong> Click the X button (appears when hovering)</li>
+                <li><strong>Zoom:</strong> Scroll wheel to zoom in/out (zooms toward cursor)</li>
+                <li><strong>Pan:</strong> When zoomed in, drag to pan around the image</li>
+                <li><strong>Close:</strong> Click X button or press <strong>Escape</strong> key</li>
             </ul>
             
             <hr>
             
             <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i>About</h4>
             <div style="margin-left: 20px; font-size: 0.9em;">
-                <p><i class="fa-solid fa-code-branch" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Version:</strong> 1.0.0</p>
+                <p><i class="fa-solid fa-code-branch" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Version:</strong> 1.1.0</p>
                 <p><i class="fa-solid fa-user" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Creator:</strong> Quackified</p>
                 <p><i class="fa-brands fa-github" style="margin-right: 6px; width: 16px; text-align: center;"></i><a href="" target="_blank" style="color: var(--SmartThemeQuoteColor);">GitHub Repository</a></p>
             </div>
