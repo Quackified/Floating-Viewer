@@ -1,0 +1,177 @@
+/* Gallery Window - NO background, NO padding, wraps image */
+#floating-viewer-window {
+    font-family: var(--mainFontFamily);
+    background-color: transparent !important;
+    padding: 0 !important;
+    border: 0 !important;
+    display: inline-block !important;
+    line-height: 0;
+    width: auto !important;
+    height: auto !important;
+}
+
+/* Image defines the size */
+#gallery-image {
+    display: block;
+    object-fit: contain;
+    /* Prevent native browser drag-and-drop on image */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Close Button - Hidden by default */
+#gallery-close {
+    transition: all 0.2s;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Show button when hovering over the window */
+#floating-viewer-window:hover #gallery-close {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Button hover state */
+#gallery-close:hover {
+    background: rgba(180, 180, 180, 0.9) !important;
+    color: #333 !important;
+    transform: scale(1.1);
+}
+
+#gallery-close:active {
+    transform: scale(0.95);
+}
+
+/* jQuery UI Resize Handles - Hidden by default */
+#floating-viewer-window .ui-resizable-handle {
+    background: transparent;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+/* Show resize handles when hovering */
+#floating-viewer-window:hover .ui-resizable-handle {
+    opacity: 1;
+}
+
+#floating-viewer-window .ui-resizable-n {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    cursor: ns-resize;
+}
+
+#floating-viewer-window .ui-resizable-s {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    cursor: ns-resize;
+}
+
+#floating-viewer-window .ui-resizable-e {
+    right: 0;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+#floating-viewer-window .ui-resizable-w {
+    left: 0;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+#floating-viewer-window .ui-resizable-ne {
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: ne-resize;
+}
+
+#floating-viewer-window .ui-resizable-nw {
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nw-resize;
+}
+
+#floating-viewer-window .ui-resizable-se {
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: se-resize;
+}
+
+#floating-viewer-window .ui-resizable-sw {
+    bottom: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    cursor: sw-resize;
+}
+
+/* ===== MOBILE / TOUCH DEVICE STYLES ===== */
+
+/* Touch device detection via JS class */
+#floating-viewer-window.touch-device #gallery-close {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    /* Reduced touch target size for better proportion */
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 18px !important;
+}
+
+/* Mobile resize handle styling - transparent, no background */
+#gallery-resize-handle {
+    background: transparent;
+    pointer-events: auto;
+}
+
+/* Show resize handle on touch devices */
+#floating-viewer-window.touch-device #gallery-resize-handle {
+    display: flex !important;
+}
+
+/* Hide jQuery UI resize handles on touch (we use custom handle instead) */
+#floating-viewer-window.touch-device .ui-resizable-handle {
+    display: none !important;
+}
+
+/* Fallback: CSS media query for coarse pointers (touch screens) */
+@media (pointer: coarse) {
+    #floating-viewer-window #gallery-close {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 18px !important;
+    }
+    
+    #gallery-resize-handle {
+        display: flex !important;
+    }
+    
+    #floating-viewer-window .ui-resizable-handle {
+        display: none !important;
+    }
+    
+    /* Slightly round corners more on mobile for better aesthetics */
+    #gallery-image {
+        border-radius: 12px !important;
+    }
+}
