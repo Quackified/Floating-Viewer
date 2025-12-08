@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.1.1] - 2025-12-08
+
+### Added
+- **Lock Button**: Lock individual viewer positions (🔒/🔓 button beside X)
+- **Remember Layout**: Save positions for all viewer slots (Multi-Image mode)
+- **Fixed Viewer IDs**: Stable ID system (1-10) for reliable position tracking
+- **Clear Saved Positions**: Button to reset all remembered positions
+
+### Changed
+- Reorganized settings: separate **Zoom Settings** and **Multi-Image Settings** sections
+- Storage now uses object-based format keyed by viewer ID (more reliable)
+
+### Fixed
+- Locked positions now correctly preserved when clearing cache
+- Position restore works correctly with multi-image mode
+- Pan limits allow reaching image edges when zoomed
+- Cursor-origin zoom math improved
+
+---
+
 ## [1.1.0] - 2025-12-08
 
 ### Added

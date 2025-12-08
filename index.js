@@ -52,6 +52,7 @@ const defaultSettings = {
     interceptAvatars: true,
     interceptGallery: true,
     rememberPosition: true,
+    rememberLayout: false, // Remember positions for all viewers (slot-based)
     defaultSize: 60,  // Percentage of viewport (10-100)
     enableZoom: true,
     maxZoom: 300,     // Maximum zoom percentage (100-500)
@@ -71,6 +72,7 @@ function loadSettings() {
     $("#floating_viewer_intercept_avatars").prop("checked", extension_settings[extensionName].interceptAvatars);
     $("#floating_viewer_intercept_gallery").prop("checked", extension_settings[extensionName].interceptGallery);
     $("#floating_viewer_remember_position").prop("checked", extension_settings[extensionName].rememberPosition);
+    $("#floating_viewer_remember_layout").prop("checked", extension_settings[extensionName].rememberLayout);
     $("#floating_viewer_default_size").val(extension_settings[extensionName].defaultSize);
     $("#floating_viewer_enable_zoom").prop("checked", extension_settings[extensionName].enableZoom);
     $("#floating_viewer_max_zoom").val(extension_settings[extensionName].maxZoom);
@@ -100,6 +102,7 @@ function saveSettings() {
     extension_settings[extensionName].interceptAvatars = $("#floating_viewer_intercept_avatars").prop("checked");
     extension_settings[extensionName].interceptGallery = $("#floating_viewer_intercept_gallery").prop("checked");
     extension_settings[extensionName].rememberPosition = $("#floating_viewer_remember_position").prop("checked");
+    extension_settings[extensionName].rememberLayout = $("#floating_viewer_remember_layout").prop("checked");
     
     // Clamp default size to valid range
     let size = parseInt($("#floating_viewer_default_size").val()) || 60;
@@ -135,6 +138,7 @@ const isTouchDevice = () => {
 
 // Session storage for remembering position and size
 const STORAGE_KEY = 'floating-viewer-state';
+const LAYOUT_KEY = 'floating-viewer-layout';
 
 function saveViewerState(left, top, width, height) {
     try {
@@ -151,19 +155,110 @@ function getViewerState() {
     }
 }
 
+// Layout storage (object keyed by viewerId)
+function saveLayoutPosition(viewerId, left, top, width, height) {
+    try {
+        const layout = getLayoutState() || {};
+        layout[viewerId] = { left, top, width, height };
+        sessionStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+    } catch (e) { /* Storage not available */ }
+}
+
+function getLayoutState() {
+    try {
+        const layout = sessionStorage.getItem(LAYOUT_KEY);
+        return layout ? JSON.parse(layout) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function getLayoutPosition(viewerId) {
+    const layout = getLayoutState();
+    return layout ? layout[viewerId] : null;
+}
+
+// Locked viewers storage (array of viewerIds)
+const LOCKED_KEY = 'floating-viewer-locked';
+
+function getLockedViewers() {
+    try {
+        const locked = sessionStorage.getItem(LOCKED_KEY);
+        return locked ? JSON.parse(locked) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function setViewerLocked(viewerId, isLocked) {
+    try {
+        let locked = getLockedViewers();
+        if (isLocked && !locked.includes(viewerId)) {
+            locked.push(viewerId);
+        } else if (!isLocked) {
+            locked = locked.filter(id => id !== viewerId);
+        }
+        sessionStorage.setItem(LOCKED_KEY, JSON.stringify(locked));
+    } catch (e) { /* Storage not available */ }
+}
+
+function isViewerLocked(viewerId) {
+    return getLockedViewers().includes(viewerId);
+}
+
+function clearLayoutState() {
+    try {
+        const locked = getLockedViewers();
+        if (locked.length > 0) {
+            // Keep locked positions, remove only unlocked
+            const layout = getLayoutState() || {};
+            const newLayout = {};
+            for (const id of locked) {
+                if (layout[id]) {
+                    newLayout[id] = layout[id];
+                }
+            }
+            sessionStorage.setItem(LAYOUT_KEY, JSON.stringify(newLayout));
+        } else {
+            sessionStorage.removeItem(LAYOUT_KEY);
+        }
+        sessionStorage.removeItem(STORAGE_KEY);
+    } catch (e) { /* Storage not available */ }
+}
+
 // ===== MULTI-IMAGE VIEWER MANAGEMENT =====
 let activeViewers = [];
+
+// Get next available viewerId (1 to maxInstances)
+function getNextViewerId() {
+    const settings = extension_settings[extensionName];
+    const maxId = settings.maxInstances || 10;
+    const usedIds = activeViewers.map(v => v.viewerId);
+    for (let id = 1; id <= maxId; id++) {
+        if (!usedIds.includes(id)) return id;
+    }
+    return null; // All IDs in use
+}
 let focusedViewer = null;
 
 function closeViewer(viewerData, animate = true) {
-    const { windowEl, cleanup } = viewerData;
+    const { windowEl, cleanup, viewerId } = viewerData;
+    const settings = extension_settings[extensionName];
     
     // Save state before closing
-    if (extension_settings[extensionName].rememberPosition) {
+    if (settings.rememberPosition) {
         const imgEl = windowEl.find('.fv-image');
         const currentLeft = parseInt(windowEl.css('left')) || 0;
         const currentTop = parseInt(windowEl.css('top')) || 0;
-        saveViewerState(currentLeft, currentTop, imgEl.width(), imgEl.height());
+        const width = imgEl.width();
+        const height = imgEl.height();
+        
+        // Save to layout if layout mode, otherwise single state
+        if (settings.rememberLayout && viewerId) {
+            saveLayoutPosition(viewerId, currentLeft, currentTop, width, height);
+        } else {
+            saveViewerState(currentLeft, currentTop, width, height);
+        }
     }
     
     // Run cleanup
@@ -258,12 +353,21 @@ function openEnhancedGallery(imageSrc) {
             height = height * ratio;
         }
         
+        // Get viewerId for this viewer
+        const viewerId = getNextViewerId();
+        if (!viewerId) {
+            console.warn(`[${extensionName}] No available viewer ID`);
+            windowEl.remove();
+            return;
+        }
+        
         // Check for remembered state
         let finalLeft, finalTop, finalWidth, finalHeight;
-        const savedState = settings.rememberPosition ? getViewerState() : null;
+        let usedSavedState = false;
         
-        if (savedState && !settings.multiImage) {
-            finalWidth = Math.min(savedState.width, naturalWidth);
+        // Helper to apply saved state
+        const applySavedState = (state) => {
+            finalWidth = Math.min(state.width || width, naturalWidth);
             finalHeight = finalWidth / aspectRatio;
             
             if (finalWidth > window.innerWidth * 0.95) {
@@ -277,12 +381,32 @@ function openEnhancedGallery(imageSrc) {
             
             const maxLeft = window.innerWidth - finalWidth;
             const maxTop = window.innerHeight - finalHeight;
-            finalLeft = Math.max(0, Math.min(savedState.left, maxLeft));
-            finalTop = Math.max(0, Math.min(savedState.top, maxTop));
-        } else {
+            finalLeft = Math.max(0, Math.min(state.left || 0, maxLeft));
+            finalTop = Math.max(0, Math.min(state.top || 0, maxTop));
+            usedSavedState = true;
+        };
+        
+        // Determine which saved state to use
+        if (settings.rememberPosition) {
+            if (settings.rememberLayout) {
+                // Layout mode: use viewerId-specific position
+                const savedPos = getLayoutPosition(viewerId);
+                if (savedPos) {
+                    applySavedState(savedPos);
+                }
+            } else if (activeViewers.length === 0) {
+                // Single-state mode: only first viewer uses saved position
+                const savedState = getViewerState();
+                if (savedState) {
+                    applySavedState(savedState);
+                }
+            }
+        }
+        
+        // Default position if no saved state (offset based on active count)
+        if (!usedSavedState) {
             finalWidth = width;
             finalHeight = height;
-            // Offset slightly for multi-image
             const offset = activeViewers.length * 20;
             finalLeft = (window.innerWidth - width) / 2 + offset;
             finalTop = (window.innerHeight - height) / 2 + offset;
@@ -519,6 +643,7 @@ function openEnhancedGallery(imageSrc) {
         const viewerData = {
             windowEl,
             imgEl,
+            viewerId,
             cleanup: () => cleanupFns.forEach(fn => fn())
         };
         
@@ -530,6 +655,35 @@ function openEnhancedGallery(imageSrc) {
             e.preventDefault();
             e.stopPropagation();
             closeViewer(viewerData);
+            return false;
+        });
+        
+        // Lock button
+        const lockBtn = windowEl.find('.fv-lock');
+        let isLocked = isViewerLocked(viewerId);
+        
+        // Initialize lock state from storage
+        if (isLocked) {
+            lockBtn.addClass('fv-locked');
+            lockBtn.text('🔒');
+            lockBtn.attr('title', 'Unlock position');
+        }
+        
+        lockBtn.on('click touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isLocked = !isLocked;
+            setViewerLocked(viewerId, isLocked);
+            
+            if (isLocked) {
+                lockBtn.addClass('fv-locked');
+                lockBtn.text('🔒');
+                lockBtn.attr('title', 'Unlock position');
+            } else {
+                lockBtn.removeClass('fv-locked');
+                lockBtn.text('🔓');
+                lockBtn.attr('title', 'Lock position');
+            }
             return false;
         });
         
@@ -687,9 +841,41 @@ async function initializeExtension() {
             saveSettings();
             updateDefaultSizeState();
             if (!extension_settings[extensionName].rememberPosition) {
-                try { sessionStorage.removeItem(STORAGE_KEY); } catch (e) {}
+                clearLayoutState();
             }
             console.log(`[${extensionName}] Remember position: ${extension_settings[extensionName].rememberPosition ? "ON" : "OFF"}`);
+        });
+        
+        // Remember layout checkbox
+        $("#floating_viewer_remember_layout").on("change", function() {
+            saveSettings();
+            console.log(`[${extensionName}] Remember layout: ${extension_settings[extensionName].rememberLayout ? "ON" : "OFF"}`);
+        });
+        
+        // Clear saved positions button
+        $("#floating_viewer_clear_layout").on("click", function() {
+            const settings = extension_settings[extensionName];
+            
+            // First, save positions of LOCKED viewers so they persist after clear
+            activeViewers.forEach(viewer => {
+                if (isViewerLocked(viewer.viewerId)) {
+                    const imgEl = viewer.windowEl.find('.fv-image');
+                    const currentLeft = parseInt(viewer.windowEl.css('left')) || 0;
+                    const currentTop = parseInt(viewer.windowEl.css('top')) || 0;
+                    saveLayoutPosition(viewer.viewerId, currentLeft, currentTop, imgEl.width(), imgEl.height());
+                }
+            });
+            
+            // Temporarily disable saving, close all viewers
+            const wasRememberEnabled = settings.rememberPosition;
+            settings.rememberPosition = false;
+            closeAllViewers();
+            settings.rememberPosition = wasRememberEnabled;
+            
+            // Clear unlocked positions (locked ones preserved by clearLayoutState)
+            clearLayoutState();
+            toastr.success("Saved positions cleared", "Floating Viewer");
+            console.log(`[${extensionName}] Cleared saved positions`);
         });
         
         // Zoom settings

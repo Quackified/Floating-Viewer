@@ -44,9 +44,14 @@
             </label>
             <p><small>When enabled, the viewer will open at the last used position and size until the tab is closed.</small></p>
             
+            <button id="floating_viewer_clear_layout" class="menu_button" style="margin-top: 8px; margin-bottom: 5px;">
+                <i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i>Clear Saved Positions
+            </button>
+            <p><small>Clears all remembered positions and sizes.</small></p>
+            
             <hr>
             
-            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-sliders" style="margin-right: 6px;"></i>Advanced Settings</h4>
+            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-magnifying-glass-plus" style="margin-right: 6px;"></i>Zoom Settings</h4>
             
             <label class="checkbox_label">
                 <input id="floating_viewer_enable_zoom" type="checkbox" />
@@ -67,6 +72,10 @@
             </label>
             <p><small>Allow panning beyond image bounds when zoomed (creates transparent overflow effect).</small></p>
             
+            <hr>
+            
+            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-clone" style="margin-right: 6px;"></i>Multi-Image Settings</h4>
+            
             <label class="checkbox_label">
                 <input id="floating_viewer_multi_image" type="checkbox" />
                 Allow Multiple Windows
@@ -79,6 +88,12 @@
                        min="1" max="10" value="5" style="width: 100px;" />
                 <p><small>Maximum simultaneous windows (1-10). Oldest closes when exceeded.</small></p>
             </div>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_remember_layout" type="checkbox" />
+                Remember Layout
+            </label>
+            <p><small>Remember positions for all viewer slots. Each slot (1st, 2nd, 3rd image, etc.) remembers its own position.</small></p>
             
             <hr>
             
@@ -97,7 +112,7 @@
             
             <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i>About</h4>
             <div style="margin-left: 20px; font-size: 0.9em;">
-                <p><i class="fa-solid fa-code-branch" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Version:</strong> 1.1.0</p>
+                <p><i class="fa-solid fa-code-branch" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Version:</strong> 1.1.1</p>
                 <p><i class="fa-solid fa-user" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Creator:</strong> Quackified</p>
                 <p><i class="fa-brands fa-github" style="margin-right: 6px; width: 16px; text-align: center;"></i><a href="" target="_blank" style="color: var(--SmartThemeQuoteColor);">GitHub Repository</a></p>
             </div>

@@ -79,9 +79,33 @@
 }
 
 /* Show button when hovering over the window */
-.floating-viewer-window:hover .fv-close {
+.floating-viewer-window:hover .fv-close,
+.floating-viewer-window:hover .fv-lock {
     opacity: 1;
     pointer-events: auto;
+}
+
+/* Lock button - hidden by default */
+.fv-lock {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.1s, background 0.2s;
+}
+
+/* Lock button hover state */
+.fv-lock:hover {
+    background: rgba(180, 180, 180, 0.9) !important;
+    color: #333 !important;
+    transform: scale(1.1);
+}
+
+.fv-lock:active {
+    transform: scale(0.95);
+}
+
+/* Locked state - just different color, still hides when unhovered */
+.fv-lock.fv-locked {
+    background: rgba(100, 180, 100, 0.9) !important;
 }
 
 /* Button hover state */
