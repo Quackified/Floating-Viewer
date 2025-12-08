@@ -32,13 +32,19 @@ const extensionName = "floating-viewer";
 // This works for both "Install for all users" and "Install just for me"
 const extensionFolderPath = (() => {
     const scriptUrl = import.meta.url;
-    // Extract path from URL and remove the filename (index.js)
-    const pathMatch = scriptUrl.match(/^.*\/extensions\/(.*)\/index\.js/);
-    if (pathMatch) {
-        return `extensions/${pathMatch[1]}`;
+    // Remove origin and get the path, then remove /index.js
+    try {
+        const url = new URL(scriptUrl);
+        const path = url.pathname;
+        // Remove leading slash and the filename
+        const folderPath = path.replace(/^\//, '').replace(/\/index\.js$/, '');
+        console.log(`[${extensionName}] Detected path: ${folderPath}`);
+        return folderPath;
+    } catch (e) {
+        // Fallback to third-party path if detection fails
+        console.warn(`[${extensionName}] Path detection failed, using fallback`);
+        return `scripts/extensions/third-party/${extensionName}`;
     }
-    // Fallback to third-party path if detection fails
-    return `scripts/extensions/third-party/${extensionName}`;
 })();
 
 const defaultSettings = { 

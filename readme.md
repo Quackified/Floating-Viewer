@@ -14,12 +14,15 @@ A SillyTavern extension that replaces the default image popup with a **draggable
 - **Minimal UI** – Clean viewer that wraps tightly around the image
 - **Hover Close Button** – Unobtrusive X button appears on hover
 
-## 📸 Screenshots
-
-<!-- Add your screenshots here -->
-<!-- ![Preview](screenshots/preview.png) -->
-
 ## 📦 Installation
+
+### Automatic Installation
+
+1. Open SillyTavern
+2. Go to **Extensions** panel
+3. Click **Install Extension**
+4. Paste: `https://github.com/Quackified/Floating-Viewer`
+5. Click **Save**
 
 ### Manual Installation
 
@@ -78,15 +81,14 @@ Find **Floating Viewer** in the Extensions panel (right sidebar).
 
 None reported yet! [Open an issue](../../issues) if you find one.
 
-## 📄 License
-
-MIT License – feel free to use and modify.
-
 ## 👤 Author
 
 **Quackified**
 
+- 🐙 GitHub: [@Quackified](https://github.com/Quackified)
+- 💬 Do you have some bread?
+
 ---
 
 Made for [SillyTavern](https://github.com/SillyTavern/SillyTavern)  
-Version: 1.14.0 'release' (9c9be9082)
+Tested on: v1.14.0 'release' (9c9be9082)
