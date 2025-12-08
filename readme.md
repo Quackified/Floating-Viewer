@@ -83,10 +83,12 @@ Find **Floating Viewer** in the Extensions panel (right sidebar).
 
 ## 📋 Planned Features
 
-- [ ] Download button
-- [ ] Copy to clipboard
+- [ ] Collision borders (prevent overlapping/off-screen)
+- [ ] Z-index layering (click to bring to front)
+- [ ] Snap to grid alignment
+- [ ] Quick arrange layouts (side-by-side, grid) (not sure if this is a good idea)
+- [ ] Minimize button
 - [ ] Gallery navigation (prev/next)
-- [ ] Pinch-to-zoom on mobile
 
 ## 🐛 Known Issues
 
