@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.2] - 2025-12-09
+
+### Added
+- **Pinch-to-Zoom**: Two-finger pinch gesture now works on mobile devices
+
+### Changed
+- Mobile buttons (X and Lock) now auto-hide after 2 seconds of inactivity
+- Reduced button sizes for mobile: 22px (touch devices) → 20px (narrow screens)
+
+### Fixed
+- **Pinch-to-zoom not working**: Added `touch-action: none` to enable JS touch handling
+- **Choppy drag/resize animations**: Removed CSS transition on image transform
+- **Box-shadow performance**: Disabled during drag for smoother movement on low-end devices
+- **Buttons too big on mobile**: Adjusted sizes with proper media queries for touch/narrow screens
+- Mobile buttons (Lock) were missing from touch device styles
+
+---
+
 ## [1.1.1] - 2025-12-08
 
 ### Added

@@ -484,18 +484,50 @@ function openEnhancedGallery(imageSrc) {
             cleanupFns.push(() => containerEl[0].removeEventListener('wheel', handleWheel));
         }
         
-        // ===== DRAG/PAN HANDLERS =====
+        // ===== DRAG/PAN/PINCH HANDLERS =====
         const isTouch = isTouchDevice();
         let isDragging = false;
         let isPanning = false;
+        let isPinching = false;
         let startX = 0, startY = 0;
         let initialLeft = 0, initialTop = 0;
         let initialPanX = 0, initialPanY = 0;
+        let initialPinchDistance = 0;
+        let initialPinchZoom = 100;
+        let initialPinchCenter = { x: 0, y: 0 };
+        
+        // Calculate distance between two touch points
+        const getPinchDistance = (touches) => {
+            const dx = touches[1].clientX - touches[0].clientX;
+            const dy = touches[1].clientY - touches[0].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+        
+        // Get center point between two touches
+        const getPinchCenter = (touches) => ({
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+        });
         
         const handleDragStart = (e) => {
-            if (e.target.closest('.fv-close') || e.target.closest('.fv-resize-handle')) return;
+            if (e.target.closest('.fv-close') || e.target.closest('.fv-resize-handle') || e.target.closest('.fv-lock')) return;
             
             focusedViewer = viewerData;
+            
+            // Pinch-to-zoom with two fingers
+            if (e.touches && e.touches.length >= 2 && settings.enableZoom) {
+                isPinching = true;
+                isDragging = false;
+                isPanning = false;
+                initialPinchDistance = getPinchDistance(e.touches);
+                initialPinchZoom = zoomLevel;
+                initialPinchCenter = getPinchCenter(e.touches);
+                initialPanX = panX;
+                initialPanY = panY;
+                // Optimize for pinch animation
+                imgEl.css('will-change', 'transform');
+                return;
+            }
             
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -512,6 +544,8 @@ function openEnhancedGallery(imageSrc) {
                 isDragging = true;
                 initialLeft = parseInt(windowEl.css('left')) || 0;
                 initialTop = parseInt(windowEl.css('top')) || 0;
+                // Enable performance mode (disables box-shadow)
+                windowEl.addClass('fv-dragging');
             }
             
             if (isTouch && resizeHandle.length) {
@@ -520,6 +554,41 @@ function openEnhancedGallery(imageSrc) {
         };
         
         const handleDragMove = (e) => {
+            // Handle pinch-to-zoom
+            if (isPinching && e.touches && e.touches.length >= 2) {
+                if (e.cancelable) e.preventDefault();
+                
+                const currentDistance = getPinchDistance(e.touches);
+                const scale = currentDistance / initialPinchDistance;
+                const newZoom = Math.max(100, Math.min(settings.maxZoom, initialPinchZoom * scale));
+                
+                if (newZoom !== zoomLevel) {
+                    const oldZoom = zoomLevel;
+                    zoomLevel = newZoom;
+                    
+                    // Zoom toward pinch center
+                    if (zoomLevel > 100) {
+                        const rect = containerEl[0].getBoundingClientRect();
+                        const centerX = rect.width / 2;
+                        const centerY = rect.height / 2;
+                        const currentCenter = getPinchCenter(e.touches);
+                        const pinchX = currentCenter.x - rect.left - centerX;
+                        const pinchY = currentCenter.y - rect.top - centerY;
+                        
+                        const zoomRatio = zoomLevel / oldZoom;
+                        panX = initialPanX * zoomRatio + pinchX * (zoomRatio - 1);
+                        panY = initialPanY * zoomRatio + pinchY * (zoomRatio - 1);
+                    } else {
+                        panX = 0;
+                        panY = 0;
+                    }
+                    
+                    clampPan();
+                    updateTransform();
+                }
+                return;
+            }
+            
             if (!isDragging && !isPanning) return;
             if (e.cancelable) e.preventDefault();
             
@@ -536,6 +605,7 @@ function openEnhancedGallery(imageSrc) {
                 clampPan();
                 updateTransform();
             } else {
+                // Update left/top directly during drag (legacy approach)
                 let newLeft = initialLeft + deltaX;
                 let newTop = initialTop + deltaY;
                 
@@ -544,11 +614,24 @@ function openEnhancedGallery(imageSrc) {
                 newLeft = Math.max(0, Math.min(newLeft, maxLeft));
                 newTop = Math.max(0, Math.min(newTop, maxTop));
                 
-                windowEl.css({ left: newLeft + 'px', top: newTop + 'px' });
+                windowEl[0].style.left = newLeft + 'px';
+                windowEl[0].style.top = newTop + 'px';
             }
         };
         
         const handleDragEnd = () => {
+            if (isPinching) {
+                isPinching = false;
+                initialPanX = panX;
+                initialPanY = panY;
+                imgEl.css('will-change', 'auto');
+            }
+            
+            // Exit performance mode (restore box-shadow)
+            if (isDragging) {
+                windowEl.removeClass('fv-dragging');
+            }
+            
             isDragging = false;
             if (isPanning) {
                 isPanning = false;
@@ -559,9 +642,23 @@ function openEnhancedGallery(imageSrc) {
             }
         };
         
+        // Touch auto-hide for buttons: show on touch, hide after delay
+        let touchHideTimeout = null;
+        const showButtonsOnTouch = () => {
+            windowEl.addClass('fv-touched');
+            if (touchHideTimeout) clearTimeout(touchHideTimeout);
+            touchHideTimeout = setTimeout(() => {
+                windowEl.removeClass('fv-touched');
+            }, 2000); // Hide after 2 seconds of no touch
+        };
+        
+        if (isTouch) {
+            windowEl[0].addEventListener('touchstart', showButtonsOnTouch, { passive: true });
+        }
+        
         // Attach drag handlers
         if (isTouch) {
-            containerEl[0].addEventListener('touchstart', handleDragStart, { passive: true });
+            containerEl[0].addEventListener('touchstart', handleDragStart, { passive: false });
             containerEl[0].addEventListener('touchmove', handleDragMove, { passive: false });
             containerEl[0].addEventListener('touchend', handleDragEnd, { passive: true });
             windowEl.addClass('touch-device');

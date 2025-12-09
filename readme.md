@@ -2,7 +2,7 @@
 
 A SillyTavern extension that replaces the default image popup with a **draggable and resizable floating window**.
 
-![Version](https://img.shields.io/badge/version-1.1.1-blue)
+![Version](https://img.shields.io/badge/version-1.1.2-blue)
 ![Platform](https://img.shields.io/badge/platform-SillyTavern-purple)
 
 ## ✨ Features

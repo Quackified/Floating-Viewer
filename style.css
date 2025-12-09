@@ -12,7 +12,23 @@
     height: auto !important;
     /* Animation */
     animation: fv-pop-in 0.2s ease-out forwards;
+    /* GPU acceleration for smooth dragging */
+    will-change: transform;
+    transform: translateZ(0);
 }
+
+/* Performance mode during drag - disable expensive effects */
+.floating-viewer-window.fv-dragging .fv-image {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+.floating-viewer-window.fv-dragging .fv-image-container {
+    border-radius: 0 !important;
+}
+
+/* No transition during drag - instant response to finger/mouse */
+/* This prevents stuttering from transition fighting with frequent updates */
 
 .floating-viewer-window.fv-closing {
     animation: fv-pop-out 0.15s ease-in forwards;
@@ -47,6 +63,8 @@
     position: relative;
     overflow: hidden;
     cursor: grab;
+    /* Disable browser touch gestures so JS can handle pinch-to-zoom */
+    touch-action: none;
 }
 
 .fv-image-container.fv-panning {
@@ -61,7 +79,7 @@
 .fv-image {
     display: block;
     object-fit: contain;
-    transition: transform 0.1s ease-out;
+    /* No transition - prevents choppy drag/resize animations */
     /* Prevent native browser drag-and-drop on image */
     -webkit-user-drag: none;
     -khtml-user-drag: none;
@@ -198,13 +216,21 @@
 
 /* ===== MOBILE / TOUCH DEVICE STYLES ===== */
 
-/* Touch device detection via JS class */
-.floating-viewer-window.touch-device .fv-close {
-    opacity: 1 !important;
+/* Touch device buttons - smaller size, auto-hide after touch */
+.floating-viewer-window.touch-device .fv-close,
+.floating-viewer-window.touch-device .fv-lock {
     pointer-events: auto !important;
-    width: 36px !important;
-    height: 36px !important;
-    font-size: 18px !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 11px !important;
+    /* Start hidden, shown via JS on touch */
+    transition: opacity 0.3s ease;
+}
+
+/* When actively touched, show buttons */
+.floating-viewer-window.touch-device.fv-touched .fv-close,
+.floating-viewer-window.touch-device.fv-touched .fv-lock {
+    opacity: 1 !important;
 }
 
 /* Mobile resize handle styling - transparent, no background */
@@ -225,12 +251,12 @@
 
 /* Fallback: CSS media query for coarse pointers (touch screens) */
 @media (pointer: coarse) {
-    .floating-viewer-window .fv-close {
-        opacity: 1 !important;
+    .floating-viewer-window .fv-close,
+    .floating-viewer-window .fv-lock {
         pointer-events: auto !important;
-        width: 36px !important;
-        height: 36px !important;
-        font-size: 18px !important;
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 11px !important;
     }
     
     .fv-resize-handle {
@@ -243,5 +269,15 @@
     
     .fv-image {
         border-radius: 12px !important;
+    }
+}
+
+/* Narrow screen adjustments (phones in portrait) */
+@media screen and (max-width: 1080px) {
+    .floating-viewer-window .fv-close,
+    .floating-viewer-window .fv-lock {
+        width: 20px !important;
+        height: 20px !important;
+        font-size: 10px !important;
     }
 }
