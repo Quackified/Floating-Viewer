@@ -1,5 +1,51 @@
 # Changelog
 
+## [1.2.0] - 2025-12-27
+
+### Added
+- **SVG Lock Icons**: Replaced emoji lock icons (🔒/🔓) with monochrome SVG icons for theme consistency
+- **Icon State Management**: CSS-based icon switching for locked/unlocked states
+- **Image Layout System**: New layout management system for predefined image positioning
+  - Create custom layouts with multiple slots
+  - Full-viewport layout builder with draggable floating toolbar
+  - Drag and resize slots visually
+  - Grid overlay with snap-to-grid option
+  - Collision prevention (keep slots on-screen)
+  - Per-slot Z-index control
+  - Layouts saved to localStorage (persist across sessions)
+  - Global layouts available across all themes
+  - **Layout Integration**: New viewers automatically position to layout slots (viewer 1 → slot 1, etc.)
+  - **Fill Mode**: Toggle to zoom/crop images to fill entire slot or fit within slot
+  - **Auto Max Instances**: Active layout slot count overrides manual max instances setting
+  - **Slot Re-ordering**: Up/down buttons to reorder layout slots in the builder
+- **Prevent Overlap**: New toggle to stop viewers from overlapping each other when dragging
+- **Minimize Button**: Collapse viewer to circular thumbnail with magnifying glass icon
+  - Toggle between minimized and full view
+  - Double-click minimized viewer to restore
+  - Smooth CSS animations
+
+### Changed
+- Lock button now uses inline SVG instead of emoji text
+- Simplified lock toggle logic - relies purely on CSS class toggle
+- Icons inherit theme colors via `currentColor` property
+- New "Image Layouts" section in settings panel
+- Resize is disabled when using layout slots (layout defines fixed sizes)
+
+### Fixed
+- **Firefox Compatibility**: Added defensive fixes for drag/resize issues reported on Firefox 146
+  - Added `e.preventDefault()` to mousedown handler to prevent native image drag
+  - Added `-moz-user-drag: none` CSS property for Firefox
+  - Added `ondragstart` handler to prevent native browser drag behavior
+  - Added `pointer-events: auto` to ensure event handling works correctly
+  - Added try-catch wrapper around jQuery UI resizable initialization
+  - Added defensive check for jQuery UI availability
+
+### New Files
+- `layout-builder.html` - Layout builder UI template
+- `layout-builder.js` - Layout builder UI class
+
+---
+
 ## [1.1.2] - 2025-12-09
 
 ### Added

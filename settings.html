@@ -51,6 +51,35 @@
             
             <hr>
             
+            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-clone" style="margin-right: 6px;"></i>Multi-Image Settings</h4>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_multi_image" type="checkbox" />
+                Allow Multiple Windows
+            </label>
+            <p><small>Open multiple images in separate windows simultaneously.</small></p>
+            
+            <div style="margin-top: 10px; margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px;">Maximum Instances</label>
+                <input type="number" id="floating_viewer_max_instances" class="text_pole" 
+                       min="1" max="10" value="5" style="width: 100px;" />
+                <p><small>Maximum simultaneous windows (1-10). Oldest closes when exceeded. Overridden by layout slot count when a layout is active.</small></p>
+            </div>
+            
+            <label class="checkbox_label">
+                <input id="floating_viewer_remember_layout" type="checkbox" />
+                Remember Layout
+            </label>
+            <p><small>Remember positions for all viewer slots. Each slot (1st, 2nd, 3rd image, etc.) remembers its own position.</small></p>
+            
+            <label class="checkbox_label" style="margin-top: 10px;">
+                <input id="floating_viewer_prevent_overlap" type="checkbox" />
+                Prevent Overlap
+            </label>
+            <p><small>Stop viewers from overlapping each other. When dragging, viewers will not be placed on top of others.</small></p>
+            
+            <hr>
+            
             <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-magnifying-glass-plus" style="margin-right: 6px;"></i>Zoom Settings</h4>
             
             <label class="checkbox_label">
@@ -74,26 +103,40 @@
             
             <hr>
             
-            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-clone" style="margin-right: 6px;"></i>Multi-Image Settings</h4>
+            <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-layer-group" style="margin-right: 6px;"></i>Image Layouts</h4>
             
             <label class="checkbox_label">
-                <input id="floating_viewer_multi_image" type="checkbox" />
-                Allow Multiple Windows
+                <input id="floating_viewer_layout_enabled" type="checkbox" />
+                Enable Layout System
             </label>
-            <p><small>Open multiple images in separate windows simultaneously.</small></p>
+            <p><small>Use predefined layouts for image positioning. Automatically sets max instances to match slot count.</small></p>
             
-            <div style="margin-top: 10px; margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 5px;">Maximum Instances</label>
-                <input type="number" id="floating_viewer_max_instances" class="text_pole" 
-                       min="1" max="10" value="5" style="width: 100px;" />
-                <p><small>Maximum simultaneous windows (1-10). Oldest closes when exceeded.</small></p>
+            <div id="floating_viewer_layout_controls" style="margin-top: 10px;">
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; margin-bottom: 5px;">Active Layout</label>
+                    <select id="floating_viewer_active_layout" class="text_pole" style="width: 200px;">
+                        <option value="">None - Free positioning</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                
+                <button id="floating_viewer_open_builder" class="menu_button">
+                    <i class="fa-solid fa-wrench" style="margin-right: 6px;"></i>
+                    Open Layout Builder
+                </button>
+                
+                <div style="margin-top: 12px; margin-bottom: 10px;">
+                    <label style="display: block; margin-bottom: 5px;">Image Fit Mode</label>
+                    <select id="floating_viewer_fit_mode" class="text_pole" style="width: 140px;">
+                        <option value="classic">Classic</option>
+                        <option value="cover">Cover</option>
+                        <option value="contain">Contain</option>
+                        <option value="stretch">Stretch</option>
+                        <option value="center">Center</option>
+                    </select>
+                    <p><small>How images fit in layout slots. Classic = normal viewer, Cover = fill and crop, Contain = fit within, Stretch = distort to fill, Center = original size centered.</small></p>
+                </div>
             </div>
-            
-            <label class="checkbox_label">
-                <input id="floating_viewer_remember_layout" type="checkbox" />
-                Remember Layout
-            </label>
-            <p><small>Remember positions for all viewer slots. Each slot (1st, 2nd, 3rd image, etc.) remembers its own position.</small></p>
             
             <hr>
             
@@ -112,7 +155,7 @@
             
             <h4 style="margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i>About</h4>
             <div style="margin-left: 20px; font-size: 0.9em;">
-                <p><i class="fa-solid fa-code-branch" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Version:</strong> 1.1.2</p>
+                <p><i class="fa-solid fa-code-branch" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Version:</strong> 1.2.0</p>
                 <p><i class="fa-solid fa-user" style="margin-right: 6px; width: 16px; text-align: center;"></i><strong>Creator:</strong> Quackified</p>
                 <p><i class="fa-brands fa-github" style="margin-right: 6px; width: 16px; text-align: center;"></i><a href="" target="_blank" style="color: var(--SmartThemeQuoteColor);">GitHub Repository</a></p>
             </div>

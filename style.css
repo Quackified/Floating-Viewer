@@ -1,5 +1,40 @@
 /* ===== FLOATING VIEWER - MULTI-INSTANCE STYLES ===== */
 
+/* ===== SVG ICON STYLES ===== */
+.fv-svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    flex-shrink: 0;
+    display: block;
+}
+
+/* Lock button icon centering */
+.fv-lock .fv-svg {
+    margin: auto;
+}
+
+/* Lock icon state management - unlocked by default */
+.fv-svg-lock-closed {
+    display: none !important;
+}
+
+.fv-svg-lock-open {
+    display: block !important;
+}
+
+/* When locked, swap icon visibility */
+.fv-lock.fv-locked .fv-svg-lock-open {
+    display: none !important;
+}
+
+.fv-lock.fv-locked .fv-svg-lock-closed {
+    display: block !important;
+}
+
+/* ===== GALLERY WINDOW STYLES ===== */
+
 /* Gallery Window - NO background, NO padding, wraps image */
 .floating-viewer-window {
     font-family: var(--mainFontFamily);
@@ -83,31 +118,47 @@
     /* Prevent native browser drag-and-drop on image */
     -webkit-user-drag: none;
     -khtml-user-drag: none;
+    -moz-user-drag: none;
     -moz-user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-}
-
-/* Close Button - Hidden by default */
-.fv-close {
-    transition: all 0.2s;
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Show button when hovering over the window */
-.floating-viewer-window:hover .fv-close,
-.floating-viewer-window:hover .fv-lock {
-    opacity: 1;
+    /* Ensure pointer events work correctly (Firefox fix) */
     pointer-events: auto;
 }
 
-/* Lock button - hidden by default */
-.fv-lock {
+/* Firefox-specific fixes for drag/resize */
+.fv-image-container {
+    /* Ensure pointer events work in Firefox */
+    pointer-events: auto;
+}
+
+/* Ensure resize handles are clickable in Firefox */
+.floating-viewer-window .ui-resizable-handle {
+    pointer-events: auto;
+}
+
+/* Layout slot mode - container fills the slot, image centered inside */
+.fv-image-container.fv-layout-slot {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Control buttons - Hidden by default, visible on hover */
+.fv-close,
+.fv-lock,
+.fv-minimize {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s, transform 0.1s, background 0.2s;
+}
+
+/* Show ALL buttons when hovering over the window */
+.floating-viewer-window:hover .fv-close,
+.floating-viewer-window:hover .fv-lock,
+.floating-viewer-window:hover .fv-minimize {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* Lock button hover state */
@@ -135,6 +186,66 @@
 
 .fv-close:active {
     transform: scale(0.95);
+}
+
+/* Minimize button hover state */
+.fv-minimize:hover {
+    background: rgba(180, 180, 180, 0.9) !important;
+    color: #333 !important;
+    transform: scale(1.1);
+}
+
+.fv-minimize:active {
+    transform: scale(0.95);
+}
+
+/* Minimize icon state management */
+.fv-svg-zoom-in { display: none; }
+.fv-svg-zoom-out { display: block; }
+
+.fv-minimize.fv-minimized-active .fv-svg-zoom-out { display: none; }
+.fv-minimize.fv-minimized-active .fv-svg-zoom-in { display: block; }
+
+/* ===== MINIMIZED VIEWER STATE ===== */
+/* Only transition size/shape, NOT position - position transitions cause sluggish drag */
+.floating-viewer-window.fv-minimized .fv-image-container {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4), 0 0 0 3px rgba(255,255,255,0.2);
+    transition: width 0.3s, height 0.3s, border-radius 0.3s, box-shadow 0.3s;
+}
+
+.floating-viewer-window.fv-minimized .fv-image {
+    width: 64px !important;
+    height: 64px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    transition: width 0.3s, height 0.3s, border-radius 0.3s;
+}
+
+/* Hide control bar completely when minimized (click bubble to restore) */
+.floating-viewer-window.fv-minimized .fv-control-bar {
+    display: none !important;
+}
+
+/* Hide ALL resize handles when minimized - both custom and jQuery UI */
+.floating-viewer-window.fv-minimized .fv-resize-handle,
+.floating-viewer-window.fv-minimized .ui-resizable-handle {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Minimized hover effect - pulse glow */
+.floating-viewer-window.fv-minimized:hover .fv-image-container {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 4px rgba(100,180,255,0.4);
+    transform: scale(1.05);
+}
+
+/* Cursor for minimized bubble */
+.floating-viewer-window.fv-minimized .fv-image-container {
+    cursor: pointer;
 }
 
 /* jQuery UI Resize Handles - Hidden by default */
@@ -252,7 +363,8 @@
 /* Fallback: CSS media query for coarse pointers (touch screens) */
 @media (pointer: coarse) {
     .floating-viewer-window .fv-close,
-    .floating-viewer-window .fv-lock {
+    .floating-viewer-window .fv-lock,
+    .floating-viewer-window .fv-minimize {
         pointer-events: auto !important;
         width: 22px !important;
         height: 22px !important;
@@ -275,9 +387,414 @@
 /* Narrow screen adjustments (phones in portrait) */
 @media screen and (max-width: 1080px) {
     .floating-viewer-window .fv-close,
-    .floating-viewer-window .fv-lock {
+    .floating-viewer-window .fv-lock,
+    .floating-viewer-window .fv-minimize {
         width: 20px !important;
         height: 20px !important;
         font-size: 10px !important;
     }
+}
+
+/* ===== LAYOUT BUILDER STYLES ===== */
+
+/* Full-screen overlay */
+.fv-layout-builder {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    font-family: var(--mainFontFamily);
+}
+
+/* Backdrop - blurs SillyTavern UI */
+.fv-builder-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Grid overlay */
+.fv-builder-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.fv-builder-grid.fv-grid-visible {
+    opacity: 1;
+}
+
+/* Canvas for slots */
+.fv-builder-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Individual slot */
+.fv-builder-slot {
+    position: absolute;
+    background: rgba(100, 150, 255, 0.2);
+    border: 2px dashed rgba(100, 150, 255, 0.8);
+    border-radius: 8px;
+    cursor: move;
+    user-select: none;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.fv-builder-slot:hover {
+    background: rgba(100, 150, 255, 0.3);
+    border-color: rgba(100, 150, 255, 1);
+}
+
+.fv-builder-slot.fv-slot-selected {
+    background: rgba(100, 200, 100, 0.25);
+    border-color: rgba(100, 200, 100, 1);
+    border-style: solid;
+}
+
+/* Slot label */
+.fv-slot-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+/* Slot resize handles */
+.fv-slot-resize-handle {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(100, 150, 255, 0.8);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.fv-builder-slot:hover .fv-slot-resize-handle,
+.fv-builder-slot.fv-slot-selected .fv-slot-resize-handle {
+    opacity: 1;
+}
+
+/* Corner handles */
+.fv-resize-nw, .fv-resize-ne, .fv-resize-sw, .fv-resize-se {
+    width: 10px;
+    height: 10px;
+}
+
+.fv-resize-nw { top: -5px; left: -5px; cursor: nw-resize; }
+.fv-resize-ne { top: -5px; right: -5px; cursor: ne-resize; }
+.fv-resize-sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+.fv-resize-se { bottom: -5px; right: -5px; cursor: se-resize; }
+
+/* Edge handles */
+.fv-resize-n, .fv-resize-s {
+    height: 6px;
+    left: 20px;
+    right: 20px;
+}
+
+.fv-resize-n { top: -3px; cursor: n-resize; }
+.fv-resize-s { bottom: -3px; cursor: s-resize; }
+
+.fv-resize-e, .fv-resize-w {
+    width: 6px;
+    top: 20px;
+    bottom: 20px;
+}
+
+.fv-resize-e { right: -3px; cursor: e-resize; }
+.fv-resize-w { left: -3px; cursor: w-resize; }
+
+/* Floating Toolbar - fixed at top-center */
+.fv-builder-toolbar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--SmartThemeBlurTintColor, rgba(30, 30, 40, 0.95));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    min-width: 400px;
+    max-width: 90vw;
+    z-index: 10001;
+}
+
+/* Toolbar header */
+.fv-toolbar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px 12px 0 0;
+    user-select: none;
+    cursor: pointer;
+}
+
+.fv-toolbar-title {
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+.fv-toolbar-collapse {
+    background: transparent;
+    border: none;
+    color: var(--SmartThemeBodyColor, #fff);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.fv-toolbar-collapse:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.fv-toolbar-collapse .fv-svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s;
+}
+
+.fv-builder-toolbar.fv-toolbar-collapsed .fv-toolbar-collapse .fv-svg {
+    transform: rotate(180deg);
+}
+
+/* Toolbar content */
+.fv-toolbar-content {
+    padding: 8px; /* Compact */
+    display: flex;
+    flex-direction: column;
+    gap: 6px; /* Compact */
+}
+
+.fv-builder-toolbar.fv-toolbar-collapsed .fv-toolbar-content {
+    display: none;
+}
+
+/* Toolbar row */
+.fv-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Compact */
+    flex-wrap: wrap;
+}
+
+.fv-toolbar-label {
+    font-size: 11px; /* Slightly smaller */
+    color: var(--SmartThemeBodyColor, #fff);
+    min-width: 50px;
+    opacity: 0.9;
+}
+
+/* Setting Groups for visual compacting */
+.fv-setting-group {
+    display: inline-flex;
+    align-items: center;
+    /* Removed background/border as it looked weird */
+    padding: 2px 0;
+    margin-right: 12px;
+}
+
+/* Property groups */
+.fv-prop-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--SmartThemeBodyColor, #fff);
+    white-space: nowrap;
+    margin-right: 10px;
+}
+
+.fv-prop-group label {
+    font-weight: 500;
+    margin-right: 2px;
+}
+
+.fv-prop-group input.text_pole {
+    padding: 4px 6px;
+    font-size: 12px;
+    width: 50px !important;
+    text-align: right;
+}
+
+.fv-prop-group .fv-unit {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* Buttons */
+.fv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: var(--SmartThemeBodyColor, #fff);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.fv-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.fv-btn:active {
+    transform: scale(0.98);
+}
+
+.fv-btn-icon {
+    padding: 6px;
+    min-width: 32px;
+}
+
+.fv-btn-icon .fv-svg {
+    width: 16px;
+    height: 16px;
+}
+
+.fv-btn-primary {
+    background: rgba(100, 180, 100, 0.3);
+    border-color: rgba(100, 180, 100, 0.5);
+}
+
+.fv-btn-primary:hover {
+    background: rgba(100, 180, 100, 0.5);
+    border-color: rgba(100, 180, 100, 0.7);
+}
+
+/* Action buttons row */
+.fv-toolbar-actions {
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 4px;
+}
+
+/* Layout controls disabled state */
+#floating_viewer_layout_controls {
+    transition: opacity 0.2s;
+}
+
+#floating_viewer_layout_controls.fv-layout-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Mobile adjustments for toolbar */
+@media screen and (max-width: 600px) {
+    .fv-builder-toolbar {
+        top: auto !important;
+        bottom: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+        transform: none !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        width: auto !important;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    
+    .fv-toolbar-row {
+        gap: 6px;
+    }
+    
+    /* Scale down text and inputs for mobile */
+    .fv-builder-toolbar {
+        font-size: 11px; /* Smaller base font */
+    }
+    
+    .fv-toolbar-label, 
+    .fv-prop-group,
+    .fv-prop-group label,
+    .fv-prop-group input.text_pole,
+    .fv-btn,
+    .checkbox_label {
+        font-size: 11px !important;
+    }
+    
+    .fv-prop-group input.text_pole {
+        padding: 2px 4px !important;
+        height: 24px; /* Fix height */
+    }
+    
+    .fv-btn {
+        padding: 4px 8px; /* Smaller buttons */
+    }
+    
+    .fv-prop-group {
+        margin-right: 4px;
+        margin-bottom: 2px;
+    }
+    
+    /* Allow wrapping for groups */
+    .fv-setting-group {
+        margin-right: 0;
+        margin-bottom: 4px;
+        width: auto; /* Let them wrap naturally */
+        max-width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .fv-layout-select {
+        width: 100%; /* Full width select on mobile */
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+}
+
+/* Alignment guides */
+.fv-guide-line {
+    position: fixed;
+    background: rgba(59, 130, 246, 0.7);
+    z-index: 10002;
+    pointer-events: none;
+}
+
+.fv-guide-line.fv-guide-horizontal {
+    height: 1px;
+    left: 0;
+    right: 0;
+}
+
+.fv-guide-line.fv-guide-vertical {
+    width: 1px;
+    top: 0;
+    bottom: 0;
 }

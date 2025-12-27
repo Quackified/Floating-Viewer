@@ -1,0 +1,203 @@
+<!-- Layout Builder Template - Full Viewport Mode -->
+<template id="fv-layout-builder-template">
+    <div class="fv-layout-builder" style="display: none;">
+        <!-- Background overlay (blurs SillyTavern UI) -->
+        <div class="fv-builder-backdrop"></div>
+        
+        <!-- Grid overlay (optional, CSS pattern) -->
+        <div class="fv-builder-grid"></div>
+        
+        <!-- Slot container (where draggable slots live) -->
+        <div class="fv-builder-canvas"></div>
+        
+        <!-- Floating Toolbar (draggable, bottom-center by default) -->
+        <div class="fv-builder-toolbar">
+            <!-- Toolbar header (drag handle) -->
+            <div class="fv-toolbar-header">
+                <span class="fv-toolbar-title">Layout Builder</span>
+                <button class="fv-toolbar-collapse" title="Collapse toolbar">
+                    <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 15l-6-6-6 6"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Main toolbar content -->
+            <div class="fv-toolbar-content">
+                <!-- Layout selection row -->
+                <div class="fv-toolbar-row">
+                    <label class="fv-toolbar-label">Layout:</label>
+                    <select class="fv-layout-select text_pole">
+                        <!-- Populated dynamically - includes Default layout -->
+                    </select>
+                    <button class="fv-btn fv-btn-icon fv-layout-new" title="New Layout">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                    </button>
+                    <button class="fv-btn fv-btn-icon fv-layout-save" title="Save Layout">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                    </button>
+                    <button class="fv-btn fv-btn-icon fv-layout-rename" title="Rename Layout">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button class="fv-btn fv-btn-icon fv-layout-delete" title="Delete Layout">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Layout name input (shown when editing) -->
+                <div class="fv-toolbar-row fv-layout-name-row" style="display: none;">
+                    <label class="fv-toolbar-label">Name:</label>
+                    <input type="text" class="fv-layout-name text_pole" placeholder="My Layout" style="flex: 1;">
+                </div>
+                
+                <!-- Slot controls row -->
+                <div class="fv-toolbar-row">
+                    <label class="fv-toolbar-label">Slot:</label>
+                    <select class="fv-slot-select text_pole">
+                        <!-- Populated dynamically based on slots -->
+                    </select>
+                    <button class="fv-btn fv-btn-icon fv-slot-move-up" title="Move Slot Up (earlier in order)">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="18 15 12 9 6 15"/>
+                        </svg>
+                    </button>
+                    <button class="fv-btn fv-btn-icon fv-slot-move-down" title="Move Slot Down (later in order)">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <button class="fv-btn fv-btn-icon fv-slot-add" title="Add Slot">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <path d="M12 8v8M8 12h8"/>
+                        </svg>
+                    </button>
+                    <button class="fv-btn fv-btn-icon fv-slot-remove" title="Remove Slot">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <path d="M8 12h8"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Slot properties row (merged Z-index) -->
+                <div class="fv-toolbar-row fv-slot-props">
+                    <div class="fv-prop-group">
+                        <label title="X Position (%)">X:</label>
+                        <input type="number" class="fv-slot-x text_pole" min="0" max="100" step="0.1" title="X Position (%)">
+                    </div>
+                    <div class="fv-prop-group">
+                        <label title="Y Position (%)">Y:</label>
+                        <input type="number" class="fv-slot-y text_pole" min="0" max="100" step="0.1" title="Y Position (%)">
+                    </div>
+                    <div class="fv-prop-group">
+                        <label title="Width (%)">W:</label>
+                        <input type="number" class="fv-slot-width text_pole" min="5" max="100" step="0.1" title="Width (%)">
+                    </div>
+                    <div class="fv-prop-group">
+                        <label title="Height (%)">H:</label>
+                        <input type="number" class="fv-slot-height text_pole" min="5" max="100" step="0.1" title="Height (%)">
+                    </div>
+                    
+                    <!-- Vertical Separator -->
+                    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.2); margin: 0 8px;"></div>
+                    
+                    <div class="fv-prop-group">
+                        <label title="Stacking Order (Z-Index)">Z:</label>
+                        <input type="number" class="fv-slot-zindex text_pole" min="1" max="999" step="1" style="width: 40px !important;" title="Stacking Order (Z-Index)">
+                    </div>
+                </div>
+                
+                <!-- Grid and collision settings (Grouped) -->
+                <div class="fv-toolbar-row fv-grid-settings">
+                    <div class="fv-setting-group">
+                        <label class="checkbox_label" title="Show grid lines">
+                            <input type="checkbox" class="fv-grid-show">
+                            Show Grid
+                        </label>
+                        <input type="number" class="fv-grid-size text_pole" min="5" max="100" step="5" value="20" title="Grid cell size (pixels)" style="width: 45px !important; margin-left: 5px;">
+                        <span class="fv-unit">px</span>
+                    </div>
+                    
+                    <div class="fv-setting-group">
+                        <label class="checkbox_label" title="Snap slots to grid/pixels">
+                            <input type="checkbox" class="fv-grid-snap">
+                            Snap
+                        </label>
+                        <select class="fv-snap-mode text_pole" style="width: 75px; margin-left: 5px;" title="Snap mode">
+                            <option value="grid">Grid</option>
+                            <option value="pixel">Pixel</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Keep On-Screen Row -->
+                <div class="fv-toolbar-row">
+                    <label class="checkbox_label" title="Start slot inside screen bounds">
+                        <input type="checkbox" class="fv-collision-prevent" checked>
+                        Keep On-Screen
+                    </label>
+                </div>
+                
+                <!-- Scope selection (global vs theme) -->
+                <div class="fv-toolbar-row fv-scope-settings">
+                    <label class="fv-toolbar-label" title="Controls where the layout is saved to">Save Scope:</label>
+                    <label class="checkbox_label">
+                        <input type="radio" name="fv-layout-scope" value="global" checked>
+                        Global
+                    </label>
+                    <label class="checkbox_label" style="margin-left: 10px;">
+                        <input type="radio" name="fv-layout-scope" value="theme">
+                        Theme
+                    </label>
+                    <select class="fv-theme-select text_pole" style="width: 120px; margin-left: 5px; display: none;">
+                        <!-- Populated with available themes -->
+                    </select>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="fv-toolbar-row fv-toolbar-actions">
+                    <button class="fv-btn fv-btn-primary fv-builder-apply">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Apply
+                    </button>
+                    <button class="fv-btn fv-builder-cancel">
+                        <svg class="fv-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Slot Template (for canvas) -->
+<template id="fv-slot-template">
+    <div class="fv-builder-slot" data-slot-id="">
+        <div class="fv-slot-label"></div>
+        <div class="fv-slot-resize-handle fv-resize-n"></div>
+        <div class="fv-slot-resize-handle fv-resize-e"></div>
+        <div class="fv-slot-resize-handle fv-resize-s"></div>
+        <div class="fv-slot-resize-handle fv-resize-w"></div>
+        <div class="fv-slot-resize-handle fv-resize-ne"></div>
+        <div class="fv-slot-resize-handle fv-resize-se"></div>
+        <div class="fv-slot-resize-handle fv-resize-sw"></div>
+        <div class="fv-slot-resize-handle fv-resize-nw"></div>
+    </div>
+</template>

@@ -1,5 +1,6 @@
 import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../script.js";
+import { LayoutBuilderUI } from "./layout-builder.js";
 
 // === POLYFILLS FOR OLDER BROWSERS ===
 // queueMicrotask polyfill (for browsers before 2019)
@@ -47,7 +48,7 @@ const extensionFolderPath = (() => {
     }
 })();
 
-const defaultSettings = { 
+const defaultSettings = {
     enabled: true,
     interceptAvatars: true,
     interceptGallery: true,
@@ -58,8 +59,304 @@ const defaultSettings = {
     maxZoom: 300,     // Maximum zoom percentage (100-500)
     freePan: false,   // Allow panning beyond image bounds
     multiImage: true,
-    maxInstances: 5   // Max simultaneous windows (1-10)
+    maxInstances: 5,  // Max simultaneous windows (1-10)
+    preventOverlap: false, // Prevent viewers from overlapping each other
+    // Layout system settings
+    layoutEnabled: false,       // Master toggle for layout system
+    activeLayoutId: null,       // Currently active layout ID
+    layoutFillMode: false,      // DEPRECATED - kept for migration
+    layoutFitMode: 'classic'    // Image fit mode: classic, cover, contain, stretch, center
 };
+
+// ===== LAYOUT MANAGER =====
+const LAYOUTS_STORAGE_KEY = 'floating-viewer-layouts';
+
+// Layout Manager Class
+class LayoutManager {
+    constructor() {
+        this.layouts = {};          // All layouts (global + theme)
+        this.activeLayout = null;   // Currently active layout object
+        this.builderOpen = false;   // Is builder UI open
+        this.selectedSlotId = null; // Currently selected slot in builder
+        this.isDragging = false;
+        this.isResizing = false;
+        this.loadFromStorage();
+    }
+    
+    // Load layouts from localStorage
+    loadFromStorage() {
+        try {
+            const stored = localStorage.getItem(LAYOUTS_STORAGE_KEY);
+            if (stored) {
+                const data = JSON.parse(stored);
+                this.layouts = data.layouts || {};
+            }
+        } catch (e) {
+            console.warn(`[${extensionName}] Failed to load layouts:`, e);
+            this.layouts = {};
+        }
+    }
+    
+    // Save layouts to localStorage
+    saveToStorage() {
+        try {
+            const data = {
+                layouts: this.layouts,
+                version: 1
+            };
+            localStorage.setItem(LAYOUTS_STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+            console.error(`[${extensionName}] Failed to save layouts:`, e);
+        }
+    }
+    
+    // Check if layout system is enabled
+    isEnabled() {
+        return extension_settings[extensionName]?.layoutEnabled || false;
+    }
+    
+    // Get all layout IDs and names
+    getLayoutList() {
+        return Object.entries(this.layouts).map(([id, layout]) => ({
+            id,
+            name: layout.name,
+            slotCount: layout.slots?.length || 0,
+            scope: layout.scope || 'global',
+            theme: layout.theme || null
+        }));
+    }
+    
+    // Get a specific layout by ID
+    getLayout(layoutId) {
+        return this.layouts[layoutId] || null;
+    }
+    
+    // Get the currently active layout
+    getActiveLayout() {
+        const activeId = extension_settings[extensionName]?.activeLayoutId;
+        if (activeId && this.layouts[activeId]) {
+            return this.layouts[activeId];
+        }
+        return null;
+    }
+    
+    // Set active layout
+    setActiveLayout(layoutId) {
+        extension_settings[extensionName].activeLayoutId = layoutId;
+        this.activeLayout = layoutId ? this.layouts[layoutId] : null;
+        saveSettingsDebounced();
+    }
+    
+    // Create a new layout
+    createLayout(name = 'New Layout') {
+        const id = 'layout-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const layout = {
+            name,
+            created: new Date().toISOString(),
+            modified: new Date().toISOString(),
+            scope: 'global',
+            theme: null,
+            slots: [
+                this.createDefaultSlot(1)
+            ],
+            gridSettings: {
+                enabled: false,
+                size: 20,
+                snap: false
+            },
+            collisionSettings: {
+                preventOffscreen: true,
+                preventOverlap: false
+            }
+        };
+        
+        this.layouts[id] = layout;
+        this.saveToStorage();
+        return id;
+    }
+    
+    // Create a default slot
+    createDefaultSlot(slotId) {
+        return {
+            id: slotId,
+            position: { x: 10 + (slotId - 1) * 5, y: 10 + (slotId - 1) * 5 },
+            size: { width: 40, height: 60 },
+            zIndex: 500 + slotId,
+            aspectRatio: null,
+            borders: {
+                enabled: false,
+                width: 2,
+                color: '#ffffff',
+                radius: 10
+            }
+        };
+    }
+    
+    // Update a layout
+    updateLayout(layoutId, updates) {
+        if (!this.layouts[layoutId]) return false;
+        
+        Object.assign(this.layouts[layoutId], updates);
+        this.layouts[layoutId].modified = new Date().toISOString();
+        this.saveToStorage();
+        return true;
+    }
+    
+    // Delete a layout
+    deleteLayout(layoutId) {
+        if (!this.layouts[layoutId]) return false;
+        
+        delete this.layouts[layoutId];
+        this.saveToStorage();
+        
+        // Clear active if it was this one
+        if (extension_settings[extensionName]?.activeLayoutId === layoutId) {
+            this.setActiveLayout(null);
+        }
+        return true;
+    }
+    
+    // Add a slot to a layout
+    addSlot(layoutId) {
+        const layout = this.layouts[layoutId];
+        if (!layout) return null;
+        
+        const maxSlots = extension_settings[extensionName]?.maxInstances || 10;
+        if (layout.slots.length >= maxSlots) {
+            toastr.warning(`Maximum ${maxSlots} slots allowed - Update maxInstances to increase (max 10)`, 'Layout Builder');
+            return null;
+        }
+        
+        // Find next available slot ID
+        const usedIds = layout.slots.map(s => s.id);
+        let newId = 1;
+        while (usedIds.includes(newId) && newId <= maxSlots) newId++;
+        
+        const newSlot = this.createDefaultSlot(newId);
+        layout.slots.push(newSlot);
+        layout.modified = new Date().toISOString();
+        this.saveToStorage();
+        
+        return newSlot;
+    }
+    
+    // Remove a slot from a layout
+    removeSlot(layoutId, slotId) {
+        const layout = this.layouts[layoutId];
+        if (!layout) return false;
+        
+        if (layout.slots.length <= 1) {
+            toastr.warning('Cannot remove the last slot', 'Layout Builder');
+            return false;
+        }
+        
+        layout.slots = layout.slots.filter(s => s.id !== slotId);
+        layout.modified = new Date().toISOString();
+        this.saveToStorage();
+        return true;
+    }
+    
+    // Update a specific slot
+    updateSlot(layoutId, slotId, updates) {
+        const layout = this.layouts[layoutId];
+        if (!layout) return false;
+        
+        const slot = layout.slots.find(s => s.id === slotId);
+        if (!slot) return false;
+        
+        Object.assign(slot, updates);
+        layout.modified = new Date().toISOString();
+        this.saveToStorage();
+        return true;
+    }
+    
+    // Get slot configuration for a viewer ID (matches by array position, not slot ID)
+    getSlotForViewer(viewerId) {
+        const layout = this.getActiveLayout();
+        if (!layout) return null;
+        
+        // viewerId is 1-indexed, array is 0-indexed
+        // So viewerId 1 → slots[0], viewerId 2 → slots[1], etc.
+        const slotIndex = viewerId - 1;
+        return layout.slots[slotIndex] || null;
+    }
+    
+    // Reorder a slot to a new position (newIndex is 0-based)
+    reorderSlot(layoutId, slotId, newIndex) {
+        const layout = this.layouts[layoutId];
+        if (!layout) return false;
+        
+        const currentIndex = layout.slots.findIndex(s => s.id === slotId);
+        if (currentIndex === -1) return false;
+        if (newIndex < 0 || newIndex >= layout.slots.length) return false;
+        
+        // Remove slot from current position
+        const [slot] = layout.slots.splice(currentIndex, 1);
+        // Insert at new position
+        layout.slots.splice(newIndex, 0, slot);
+        
+        layout.modified = new Date().toISOString();
+        this.saveToStorage();
+        return true;
+    }
+    
+    // Renumber slots to match their array order (1, 2, 3, ...)
+    renumberSlots(layoutId) {
+        const layout = this.layouts[layoutId];
+        if (!layout) return false;
+        
+        layout.slots.forEach((slot, index) => {
+            slot.id = index + 1;
+        });
+        
+        layout.modified = new Date().toISOString();
+        this.saveToStorage();
+        return true;
+    }
+    
+    // Get position/size for a viewer based on layout
+    getViewerConfig(viewerId) {
+        const slot = this.getSlotForViewer(viewerId);
+        if (!slot) return null;
+        
+        // Convert percentage to pixels
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        
+        return {
+            left: (slot.position.x / 100) * vw,
+            top: (slot.position.y / 100) * vh,
+            width: (slot.size.width / 100) * vw,
+            height: (slot.size.height / 100) * vh,
+            zIndex: slot.zIndex,
+            aspectRatio: slot.aspectRatio,
+            borders: slot.borders
+        };
+    }
+}
+
+// Global layout manager instance
+let layoutManager = null;
+let layoutBuilderUI = null;
+
+function getLayoutManager() {
+    if (!layoutManager) {
+        layoutManager = new LayoutManager();
+    }
+    return layoutManager;
+}
+
+function getLayoutBuilderUI() {
+    if (!layoutBuilderUI) {
+        layoutBuilderUI = new LayoutBuilderUI(getLayoutManager(), extensionFolderPath, extensionName);
+    }
+    return layoutBuilderUI;
+}
+
+function openLayoutBuilder() {
+    const builder = getLayoutBuilderUI();
+    builder.open();
+}
 
 function loadSettings() {
     if (!extension_settings[extensionName]) extension_settings[extensionName] = {};
@@ -80,9 +377,20 @@ function loadSettings() {
     $("#floating_viewer_multi_image").prop("checked", extension_settings[extensionName].multiImage);
     $("#floating_viewer_max_instances").val(extension_settings[extensionName].maxInstances);
     
+    // Layout system settings
+    $("#floating_viewer_layout_enabled").prop("checked", extension_settings[extensionName].layoutEnabled);
+    
+    // Migrate old layoutFillMode to new layoutFitMode
+    if (extension_settings[extensionName].layoutFillMode === true && !extension_settings[extensionName].layoutFitMode) {
+        extension_settings[extensionName].layoutFitMode = 'cover';
+    }
+    $("#floating_viewer_fit_mode").val(extension_settings[extensionName].layoutFitMode || 'classic');
+    $("#floating_viewer_prevent_overlap").prop("checked", extension_settings[extensionName].preventOverlap);
+    
     // Gray out default size when remember position is enabled
     updateDefaultSizeState();
     updateMultiImageState();
+    updateLayoutState();
 }
 
 function updateDefaultSizeState() {
@@ -95,6 +403,40 @@ function updateMultiImageState() {
     const isMultiEnabled = extension_settings[extensionName].multiImage;
     $("#floating_viewer_max_instances").prop("disabled", !isMultiEnabled);
     $("#floating_viewer_max_instances").css("opacity", isMultiEnabled ? "1" : "0.5");
+}
+
+function updateLayoutState() {
+    const isLayoutEnabled = extension_settings[extensionName].layoutEnabled;
+    const controls = $("#floating_viewer_layout_controls");
+    
+    if (isLayoutEnabled) {
+        controls.removeClass('fv-layout-disabled');
+        // Populate layout dropdown
+        populateLayoutDropdown();
+    } else {
+        controls.addClass('fv-layout-disabled');
+    }
+}
+
+function populateLayoutDropdown() {
+    const manager = getLayoutManager();
+    const layouts = manager.getLayoutList();
+    const activeId = extension_settings[extensionName].activeLayoutId;
+    const dropdown = $("#floating_viewer_active_layout");
+    
+    // Clear existing options except the first one
+    dropdown.find('option:not(:first)').remove();
+    
+    // Add layout options
+    layouts.forEach(layout => {
+        const option = $('<option></option>')
+            .val(layout.id)
+            .text(`${layout.name} (${layout.slotCount} slots)`);
+        if (layout.id === activeId) {
+            option.prop('selected', true);
+        }
+        dropdown.append(option);
+    });
 }
 
 function saveSettings() {
@@ -124,6 +466,11 @@ function saveSettings() {
     maxInstances = Math.max(1, Math.min(10, maxInstances));
     extension_settings[extensionName].maxInstances = maxInstances;
     $("#floating_viewer_max_instances").val(maxInstances);
+    
+    // Layout system settings
+    extension_settings[extensionName].layoutEnabled = $("#floating_viewer_layout_enabled").prop("checked");
+    extension_settings[extensionName].layoutFitMode = $("#floating_viewer_fit_mode").val() || 'classic';
+    extension_settings[extensionName].preventOverlap = $("#floating_viewer_prevent_overlap").prop("checked");
     
     saveSettingsDebounced();
 }
@@ -299,8 +646,71 @@ function ensureKeyboardListener() {
     }
 }
 
+// ===== PANEL DETECTION FOR Z-INDEX MANAGEMENT =====
+const Z_INDEX_HIGH = 3500;  // Above topbar
+const Z_INDEX_LOW = 500;    // Below panels
+
+// Update z-index for all active viewers
+function updateViewerZIndex(zIndex) {
+    activeViewers.forEach(v => {
+        if (v.windowEl) {
+            v.windowEl.css('z-index', zIndex);
+        }
+    });
+}
+
+// Check if any SillyTavern panel is open
+function isPanelOpen() {
+    // Common panel selectors in SillyTavern
+    const panelSelectors = [
+        '.drawer-content:visible',
+        '#right-nav-panel.openDrawer',
+        '#left-nav-panel.openDrawer',
+        '.popup:visible',
+        '#character_popup:visible',
+        '#dialogue_popup:visible'
+    ];
+    
+    for (const selector of panelSelectors) {
+        if ($(selector).length > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Observe DOM changes to detect panel open/close
+let panelObserverActive = false;
+function initPanelObserver() {
+    if (panelObserverActive) return;
+    
+    const observer = new MutationObserver(() => {
+        const panelOpen = isPanelOpen();
+        updateViewerZIndex(panelOpen ? Z_INDEX_LOW : Z_INDEX_HIGH);
+    });
+    
+    // Observe body for class/style changes
+    observer.observe(document.body, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: ['class', 'style']
+    });
+    
+    panelObserverActive = true;
+}
+
 function openEnhancedGallery(imageSrc) {
     const settings = extension_settings[extensionName];
+    
+    // Get effective max instances (use layout slot count when layout is active)
+    let effectiveMaxInstances = settings.maxInstances;
+    if (settings.layoutEnabled) {
+        const layout = getLayoutManager().getActiveLayout();
+        if (layout && layout.slots) {
+            effectiveMaxInstances = layout.slots.length;
+        }
+    }
     
     // Check multi-image settings
     if (!settings.multiImage) {
@@ -308,7 +718,7 @@ function openEnhancedGallery(imageSrc) {
         closeAllViewers();
     } else {
         // Enforce max instances
-        while (activeViewers.length >= settings.maxInstances) {
+        while (activeViewers.length >= effectiveMaxInstances) {
             closeViewer(activeViewers[0], false);
         }
     }
@@ -386,8 +796,79 @@ function openEnhancedGallery(imageSrc) {
             usedSavedState = true;
         };
         
-        // Determine which saved state to use
-        if (settings.rememberPosition) {
+        // Check for active layout configuration FIRST (highest priority)
+        let layoutConfig = null;
+        let usingLayoutSlot = false;
+        let slotWidth = 0, slotHeight = 0;  // Slot dimensions (container size)
+        
+        if (settings.layoutEnabled) {
+            const layoutMgr = getLayoutManager();
+            if (layoutMgr.isEnabled()) {
+                layoutConfig = layoutMgr.getViewerConfig(viewerId);
+                if (layoutConfig) {
+                    // Layout provides position and size in pixels
+                    finalLeft = layoutConfig.left;
+                    finalTop = layoutConfig.top;
+                    slotWidth = layoutConfig.width;
+                    slotHeight = layoutConfig.height;
+                    
+                    const fitMode = settings.layoutFitMode || 'classic';
+                    
+                    if (fitMode === 'classic') {
+                        // Classic: normal viewer behavior, container matches image size
+                        if (slotWidth / slotHeight > aspectRatio) {
+                            finalHeight = slotHeight;
+                            finalWidth = finalHeight * aspectRatio;
+                        } else {
+                            finalWidth = slotWidth;
+                            finalHeight = finalWidth / aspectRatio;
+                        }
+                    } else if (fitMode === 'cover') {
+                        // Cover: scale to cover entire slot, overflow clipped
+                        if (slotWidth / slotHeight > aspectRatio) {
+                            finalWidth = slotWidth;
+                            finalHeight = finalWidth / aspectRatio;
+                        } else {
+                            finalHeight = slotHeight;
+                            finalWidth = finalHeight * aspectRatio;
+                        }
+                    } else if (fitMode === 'contain') {
+                        // Contain: fit within slot, maintain aspect ratio
+                        if (slotWidth / slotHeight > aspectRatio) {
+                            finalHeight = slotHeight;
+                            finalWidth = finalHeight * aspectRatio;
+                        } else {
+                            finalWidth = slotWidth;
+                            finalHeight = finalWidth / aspectRatio;
+                        }
+                    } else if (fitMode === 'stretch') {
+                        // Stretch: distort to fill slot exactly
+                        finalWidth = slotWidth;
+                        finalHeight = slotHeight;
+                    } else if (fitMode === 'center') {
+                        // Center: original size centered in slot (scaled down if larger, maintains aspect ratio)
+                        if (naturalWidth <= slotWidth && naturalHeight <= slotHeight) {
+                            // Image fits within slot - use original size
+                            finalWidth = naturalWidth;
+                            finalHeight = naturalHeight;
+                        } else {
+                            // Image larger than slot - scale down to fit while maintaining aspect ratio
+                            const scaleX = slotWidth / naturalWidth;
+                            const scaleY = slotHeight / naturalHeight;
+                            const scale = Math.min(scaleX, scaleY);
+                            finalWidth = naturalWidth * scale;
+                            finalHeight = naturalHeight * scale;
+                        }
+                    }
+                    
+                    usingLayoutSlot = (fitMode !== 'classic');
+                    usedSavedState = true;
+                }
+            }
+        }
+        
+        // Determine which saved state to use (only if no layout config)
+        if (!usedSavedState && settings.rememberPosition) {
             if (settings.rememberLayout) {
                 // Layout mode: use viewerId-specific position
                 const savedPos = getLayoutPosition(viewerId);
@@ -414,11 +895,73 @@ function openEnhancedGallery(imageSrc) {
         
         // Set image and container size
         imgEl.attr('src', imageSrc);
-        imgEl.css({ width: finalWidth + 'px', height: finalHeight + 'px' });
-        containerEl.css({ width: finalWidth + 'px', height: finalHeight + 'px' });
+        // Ensure draggable is false to prevent native browser drag (Firefox fix)
+        imgEl.attr('draggable', 'false');
+        imgEl[0].ondragstart = () => false;
+        
+        if (usingLayoutSlot) {
+            const fitMode = settings.layoutFitMode || 'classic';
+            
+            // For non-classic modes: container AND window fill the entire slot
+            // The image uses CSS object-fit for proper scaling
+            containerEl.css({ 
+                width: slotWidth + 'px', 
+                height: slotHeight + 'px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden'
+            });
+            
+            // Apply the appropriate object-fit style based on mode
+            if (fitMode === 'cover') {
+                // Cover: fill entire slot, crop overflow
+                imgEl.css({ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover'
+                });
+            } else if (fitMode === 'contain') {
+                // Contain: fit within slot, maintain aspect ratio (letterboxing)
+                imgEl.css({ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'contain'
+                });
+            } else if (fitMode === 'stretch') {
+                // Stretch: distort to fill slot exactly
+                imgEl.css({ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'fill'
+                });
+            } else if (fitMode === 'center') {
+                // Center: original size (capped by slot), centered
+                imgEl.css({ 
+                    width: finalWidth + 'px', 
+                    height: finalHeight + 'px',
+                    objectFit: 'none'
+                });
+            }
+            
+            // Set window size to match slot for non-classic modes
+            windowEl.css({ 
+                width: slotWidth + 'px', 
+                height: slotHeight + 'px'
+            });
+        } else {
+            // Normal mode (classic or no layout): container matches image size
+            imgEl.css({ width: finalWidth + 'px', height: finalHeight + 'px' });
+            containerEl.css({ width: finalWidth + 'px', height: finalHeight + 'px' });
+        }
         
         // Position window
         windowEl.css({ left: finalLeft + 'px', top: finalTop + 'px', display: 'block' });
+        
+        // Apply z-index from layout if available
+        if (layoutConfig && layoutConfig.zIndex) {
+            windowEl.css('z-index', layoutConfig.zIndex);
+        }
         
         // ===== ZOOM STATE =====
         let zoomLevel = 100;
@@ -509,12 +1052,45 @@ function openEnhancedGallery(imageSrc) {
             y: (touches[0].clientY + touches[1].clientY) / 2
         });
         
+        // Check if new position would overlap with other viewers
+        const wouldOverlap = (newLeft, newTop) => {
+            const width = windowEl.outerWidth();
+            const height = windowEl.outerHeight();
+            const newRect = {
+                left: newLeft,
+                top: newTop,
+                right: newLeft + width,
+                bottom: newTop + height
+            };
+            
+            for (const viewer of activeViewers) {
+                // Skip self (viewerData not created yet, compare by DOM element)
+                if (viewer.windowEl && viewer.windowEl[0] === windowEl[0]) continue;
+                
+                const rect = viewer.windowEl[0].getBoundingClientRect();
+                // Check for overlap
+                if (!(newRect.right < rect.left || 
+                      newRect.left > rect.right || 
+                      newRect.bottom < rect.top || 
+                      newRect.top > rect.bottom)) {
+                    return true; // Overlap detected
+                }
+            }
+            return false;
+        };
+        
         const handleDragStart = (e) => {
             if (e.target.closest('.fv-close') || e.target.closest('.fv-resize-handle') || e.target.closest('.fv-lock')) return;
             
+            // Prevent default to stop Firefox from initiating native image drag
+            e.preventDefault();
+            
+            // If locked, prevent dragging (but still allow zoom/pan)
+            const currentlyLocked = isViewerLocked(viewerId);
+            
             focusedViewer = viewerData;
             
-            // Pinch-to-zoom with two fingers
+            // Pinch-to-zoom with two fingers (always allowed, even when locked)
             if (e.touches && e.touches.length >= 2 && settings.enableZoom) {
                 isPinching = true;
                 isDragging = false;
@@ -536,11 +1112,13 @@ function openEnhancedGallery(imageSrc) {
             startY = clientY;
             
             if (zoomLevel > 100 && settings.enableZoom) {
+                // Panning within zoomed image (allowed even when locked)
                 isPanning = true;
                 initialPanX = panX;
                 initialPanY = panY;
                 containerEl.addClass('fv-panning');
-            } else {
+            } else if (!currentlyLocked) {
+                // Only allow dragging if NOT locked
                 isDragging = true;
                 initialLeft = parseInt(windowEl.css('left')) || 0;
                 initialTop = parseInt(windowEl.css('top')) || 0;
@@ -605,17 +1183,25 @@ function openEnhancedGallery(imageSrc) {
                 clampPan();
                 updateTransform();
             } else {
-                // Update left/top directly during drag (legacy approach)
+                // Update left/top directly during drag
                 let newLeft = initialLeft + deltaX;
                 let newTop = initialTop + deltaY;
                 
+                // Use actual element dimensions for bounds (works for both normal and minimized)
                 const maxLeft = window.innerWidth - windowEl.outerWidth();
                 const maxTop = window.innerHeight - windowEl.outerHeight();
                 newLeft = Math.max(0, Math.min(newLeft, maxLeft));
                 newTop = Math.max(0, Math.min(newTop, maxTop));
                 
-                windowEl[0].style.left = newLeft + 'px';
-                windowEl[0].style.top = newTop + 'px';
+                // Prevent overlap with other viewers if enabled
+                if (settings.preventOverlap && !wouldOverlap(newLeft, newTop)) {
+                    windowEl[0].style.left = newLeft + 'px';
+                    windowEl[0].style.top = newTop + 'px';
+                } else if (!settings.preventOverlap) {
+                    windowEl[0].style.left = newLeft + 'px';
+                    windowEl[0].style.top = newTop + 'px';
+                }
+                // If overlap detected and prevention enabled, don't update position
             }
         };
         
@@ -642,19 +1228,7 @@ function openEnhancedGallery(imageSrc) {
             }
         };
         
-        // Touch auto-hide for buttons: show on touch, hide after delay
-        let touchHideTimeout = null;
-        const showButtonsOnTouch = () => {
-            windowEl.addClass('fv-touched');
-            if (touchHideTimeout) clearTimeout(touchHideTimeout);
-            touchHideTimeout = setTimeout(() => {
-                windowEl.removeClass('fv-touched');
-            }, 2000); // Hide after 2 seconds of no touch
-        };
-        
-        if (isTouch) {
-            windowEl[0].addEventListener('touchstart', showButtonsOnTouch, { passive: true });
-        }
+        // (Touch button visibility is now handled purely by CSS)
         
         // Attach drag handlers
         if (isTouch) {
@@ -674,7 +1248,13 @@ function openEnhancedGallery(imageSrc) {
         }
         
         // ===== RESIZE (Desktop only - jQuery UI) =====
-        if (!isTouch) {
+        // Skip resize in layout slot mode - layout defines fixed sizes
+        if (!isTouch && !usingLayoutSlot) {
+            // Check if jQuery UI resizable is available (defensive check for Firefox)
+            if (typeof $.fn.resizable !== 'function') {
+                console.warn(`[${extensionName}] jQuery UI resizable not available`);
+            } else {
+            try {
             windowEl.resizable({
                 handles: 'n, e, s, w, ne, se, sw, nw',
                 minHeight: 100,
@@ -692,10 +1272,15 @@ function openEnhancedGallery(imageSrc) {
                     updateTransform();
                 }
             });
+            } catch (err) {
+                console.warn(`[${extensionName}] jQuery UI resizable initialization failed:`, err);
+            }
+            }
         }
         
         // ===== TOUCH RESIZE HANDLER =====
-        if (isTouch && resizeHandle.length) {
+        // Skip resize in layout slot mode - layout defines fixed sizes
+        if (isTouch && resizeHandle.length && !usingLayoutSlot) {
             let isResizing = false;
             let resizeStartX = 0, resizeStartY = 0;
             let initialWidth = 0, initialHeight = 0;
@@ -755,14 +1340,13 @@ function openEnhancedGallery(imageSrc) {
             return false;
         });
         
-        // Lock button
+        // Lock button - uses CSS class toggle for SVG icon state
         const lockBtn = windowEl.find('.fv-lock');
         let isLocked = isViewerLocked(viewerId);
         
         // Initialize lock state from storage
         if (isLocked) {
             lockBtn.addClass('fv-locked');
-            lockBtn.text('🔒');
             lockBtn.attr('title', 'Unlock position');
         }
         
@@ -772,16 +1356,98 @@ function openEnhancedGallery(imageSrc) {
             isLocked = !isLocked;
             setViewerLocked(viewerId, isLocked);
             
-            if (isLocked) {
-                lockBtn.addClass('fv-locked');
-                lockBtn.text('🔒');
-                lockBtn.attr('title', 'Unlock position');
-            } else {
-                lockBtn.removeClass('fv-locked');
-                lockBtn.text('🔓');
-                lockBtn.attr('title', 'Lock position');
-            }
+            // Toggle class - CSS handles icon visibility
+            lockBtn.toggleClass('fv-locked', isLocked);
+            lockBtn.attr('title', isLocked ? 'Unlock position' : 'Lock position');
             return false;
+        });
+        
+        // Minimize button - toggle between full view and circular thumbnail
+        const minimizeBtn = windowEl.find('.fv-minimize');
+        let isMinimized = false;
+        let originalDimensions = null;
+        
+        minimizeBtn.on('click touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (isMinimized) {
+                // Restore to original size
+                windowEl.removeClass('fv-minimized');
+                minimizeBtn.removeClass('fv-minimized-active');
+                if (originalDimensions) {
+                    imgEl.css({
+                        width: originalDimensions.width + 'px',
+                        height: originalDimensions.height + 'px'
+                    });
+                    containerEl.css({
+                        width: originalDimensions.width + 'px',
+                        height: originalDimensions.height + 'px'
+                    });
+                    
+                    // Check if restored viewer would be off-screen and adjust
+                    const currentLeft = parseInt(windowEl.css('left')) || 0;
+                    const currentTop = parseInt(windowEl.css('top')) || 0;
+                    const restoredWidth = originalDimensions.width;
+                    const restoredHeight = originalDimensions.height;
+                    
+                    let newLeft = currentLeft;
+                    let newTop = currentTop;
+                    
+                    // If going off right edge, expand to left
+                    if (currentLeft + restoredWidth > window.innerWidth) {
+                        newLeft = Math.max(0, window.innerWidth - restoredWidth);
+                    }
+                    // If going off bottom edge, expand upward
+                    if (currentTop + restoredHeight > window.innerHeight) {
+                        newTop = Math.max(0, window.innerHeight - restoredHeight);
+                    }
+                    
+                    if (newLeft !== currentLeft || newTop !== currentTop) {
+                        windowEl.css({ left: newLeft + 'px', top: newTop + 'px' });
+                    }
+                }
+                minimizeBtn.attr('title', 'Minimize');
+            } else {
+                // Save current dimensions and minimize
+                originalDimensions = {
+                    width: imgEl.width(),
+                    height: imgEl.height()
+                };
+                windowEl.addClass('fv-minimized');
+                minimizeBtn.addClass('fv-minimized-active');
+                minimizeBtn.attr('title', 'Restore');
+            }
+            
+            isMinimized = !isMinimized;
+            return false;
+        });
+        
+        // Click on minimized bubble to restore (not drag)
+        // Use mouseup/touchend with distance check to distinguish from drag
+        let minimizedClickStart = null;
+        
+        containerEl.on('mousedown touchstart', (e) => {
+            if (isMinimized) {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                minimizedClickStart = { x: clientX, y: clientY };
+            }
+        });
+        
+        containerEl.on('mouseup touchend', (e) => {
+            if (isMinimized && minimizedClickStart) {
+                const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+                const dx = Math.abs(clientX - minimizedClickStart.x);
+                const dy = Math.abs(clientY - minimizedClickStart.y);
+                
+                // If barely moved, treat as click to restore
+                if (dx < 10 && dy < 10) {
+                    minimizeBtn.trigger('click');
+                }
+            }
+            minimizedClickStart = null;
         });
         
         // Ensure keyboard listener is active
@@ -1008,6 +1674,31 @@ async function initializeExtension() {
             saveSettings();
             console.log(`[${extensionName}] Max instances: ${extension_settings[extensionName].maxInstances}`);
         });
+        
+        // Layout system settings
+        $("#floating_viewer_layout_enabled").on("change", function() {
+            saveSettings();
+            updateLayoutState();
+            console.log(`[${extensionName}] Layout system: ${extension_settings[extensionName].layoutEnabled ? "ON" : "OFF"}`);
+        });
+        
+        $("#floating_viewer_active_layout").on("change", function() {
+            const layoutId = $(this).val() || null;
+            getLayoutManager().setActiveLayout(layoutId);
+            console.log(`[${extensionName}] Active layout: ${layoutId || "None"}`);
+        });
+        
+        $("#floating_viewer_fit_mode").on("change", function() {
+            saveSettings();
+            console.log(`[${extensionName}] Fit mode: ${extension_settings[extensionName].layoutFitMode}`);
+        });
+        
+        $("#floating_viewer_open_builder").on("click", function() {
+            openLayoutBuilder();
+        });
+        
+        // Initialize panel observer for z-index management
+        initPanelObserver();
        
         console.log(`[${extensionName}] Loaded successfully`);
         
